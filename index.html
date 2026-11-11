@@ -3,30 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIKAWAN ERP V14 - Supabase Fixed</title>
+    <title>NIKAWAN ERP V15 - Pro Form</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Load Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --nikawan-blue: #0A2342;
-            --nikawan-blue-light: #1C3F6E;
-            --bg-main: #F1F5F9;
-            --bg-card: #FFFFFF;
-            --text-main: #1E293B;
-            --text-muted: #64748B;
-            --border: #E2E8F0;
-            --success: #10B981;
-            --danger: #EF4444;
-            --radius: 16px;
+            --nikawan-blue: #0A2342; --nikawan-blue-light: #1C3F6E;
+            --bg-main: #F1F5F9; --bg-card: #FFFFFF; --text-main: #1E293B;
+            --text-muted: #64748B; --border: #E2E8F0; --success: #10B981;
+            --danger: #EF4444; --radius: 16px;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         body { background: var(--bg-main); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
         
-        /* Layout & Sidebar */
+        /* Sidebar & Layout */
         .sidebar { width: 280px; background: var(--bg-card); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; }
         .brand-container { padding: 30px 20px; text-align: center; border-bottom: 1px solid var(--border); }
-        .app-logo { max-width: 180px; height: auto; margin-bottom: 10px; filter: drop-shadow(0 4px 6px rgba(10,35,66,0.1)); }
+        /* PERBAIKAN LOGO AGAR AESTHETIC & TIDAK GELENG */
+        .app-logo { max-width: 160px; max-height: 80px; width: auto; height: auto; object-fit: contain; margin-bottom: 15px; filter: drop-shadow(0 4px 6px rgba(10,35,66,0.1)); }
         .brand-text { font-size: 12px; font-weight: 700; color: var(--nikawan-blue); letter-spacing: 2px; text-transform: uppercase; }
         .nav-menu { flex: 1; padding-top: 20px; overflow-y: auto; }
         .nav-item { display: flex; align-items: center; gap: 15px; padding: 16px 25px; color: var(--text-muted); cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.2s; border-left: 4px solid transparent; margin: 4px 0; }
@@ -40,7 +34,7 @@
         /* Login Screen */
         .login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, var(--bg-main), #E2E8F0); z-index: 2000; display: flex; align-items: center; justify-content: center; }
         .login-box { background: var(--bg-card); padding: 50px 40px; border-radius: 24px; width: 420px; box-shadow: 0 20px 40px rgba(10,35,66,0.1); border: 1px solid var(--border); text-align: center; }
-        .login-logo { max-width: 200px; margin-bottom: 30px; }
+        .login-logo { max-width: 220px; max-height: 100px; width: auto; height: auto; object-fit: contain; margin-bottom: 30px; }
         .login-input { width: 100%; padding: 14px; background: #F8FAFC; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; outline: none; font-size: 14px; }
         .login-input:focus { border-color: var(--nikawan-blue); background: white; }
         .login-btn { width: 100%; padding: 14px; background: var(--nikawan-blue); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; transition: 0.2s; }
@@ -166,6 +160,31 @@
         </div>
     </div>
 
+    <!-- MODAL FORM PROYEK BARU (PENGGANTI PROMPT) -->
+    <div id="projectModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header"><h3 style="color: var(--nikawan-blue);">Mulai Proyek Baru</h3><button onclick="closeModal('projectModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nomor Proyek (Otomatis)</label>
+                    <input id="projNumber" class="form-control" readonly style="background:#e2e8f0; color:#64748b; cursor:not-allowed;">
+                </div>
+                <div class="form-group">
+                    <label>Nilai Proyek (Rp)</label>
+                    <input type="number" id="projValue" class="form-control" placeholder="Contoh: 50000000">
+                </div>
+                <div class="form-group">
+                    <label>Deskripsi Pekerjaan</label>
+                    <textarea id="projDesc" class="form-control" rows="3" placeholder="Jelaskan detail pekerjaan..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('projectModal')">Batal</button>
+                <button class="btn btn-primary" onclick="submitNewProject()"><i class="fas fa-save"></i> Simpan Proyek</button>
+            </div>
+        </div>
+    </div>
+
     <div id="uploadModal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-header"><h3 style="color: var(--nikawan-blue);">Upload Dokumen Client</h3><button onclick="closeModal('uploadModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
@@ -200,19 +219,15 @@
             if (window.supabase && window.supabase.createClient) {
                 sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 console.log('Supabase client initialized successfully');
-            } else {
-                throw new Error('Library Supabase belum dimuat');
-            }
-        } catch(e) {
-            console.error('Gagal inisialisasi Supabase:', e);
-            alert('Gagal memuat library Supabase. Cek koneksi internet.');
-        }
+            } else { throw new Error('Library Supabase belum dimuat'); }
+        } catch(e) { console.error(e); alert('Gagal memuat library Supabase.'); }
 
         let currentUser = null;
         let companyLogo = localStorage.getItem('nikawan_logo') || '';
         let companySignature = localStorage.getItem('nikawan_sig') || '';
         let selectedClientId = null;
         let currentProjectId = null;
+        let tempClientIdForProject = null; // Untuk menyimpan ID client saat buka modal proyek
 
         // ==========================================
         // AUTHENTICATION
@@ -222,27 +237,15 @@
             const password = document.getElementById('loginPass').value.trim();
             const errorEl = document.getElementById('loginError');
 
-            if (!username || !password) {
-                errorEl.innerText = 'Username dan password wajib diisi';
-                errorEl.style.display = 'block';
-                return;
-            }
+            if (!username || !password) { errorEl.innerText = 'Username dan password wajib diisi'; errorEl.style.display = 'block'; return; }
 
             showLoading(true);
             try {
-                // Panggil RPC verify_user
-                const { data: isValid, error: authErr } = await sb.rpc('verify_user', { 
-                    p_username: username, 
-                    p_password: password 
-                });
-                
+                const { data: isValid, error: authErr } = await sb.rpc('verify_user', { p_username: username, p_password: password });
                 if (authErr) throw new Error('Fungsi verify_user belum dibuat di Supabase.');
                 if (!isValid) throw new Error('Username atau password salah');
 
-                // Ambil data user lengkap
-                const { data: userData, error: userErr } = await sb.from('users').select('*').eq('username', username).single();
-                if(userErr) throw new Error('Gagal mengambil data user: ' + userErr.message);
-
+                const { data: userData } = await sb.from('users').select('*').eq('username', username).single();
                 currentUser = userData;
                 localStorage.setItem('nikawan_user', JSON.stringify(currentUser));
                 
@@ -250,21 +253,11 @@
                 document.getElementById('userDisplay').innerText = currentUser.full_name;
                 applyBranding();
                 navigate('clients');
-            } catch (err) {
-                console.error(err);
-                errorEl.innerText = err.message;
-                errorEl.style.display = 'block';
-            } finally {
-                showLoading(false);
-            }
+            } catch (err) { errorEl.innerText = err.message; errorEl.style.display = 'block'; } 
+            finally { showLoading(false); }
         }
 
-        function logout() {
-            if(confirm('Yakin ingin keluar?')) {
-                localStorage.removeItem('nikawan_user');
-                location.reload();
-            }
-        }
+        function logout() { if(confirm('Yakin ingin keluar?')) { localStorage.removeItem('nikawan_user'); location.reload(); } }
 
         // ==========================================
         // BRANDING & LOCAL LOGO
@@ -273,34 +266,18 @@
             const file = input.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    companyLogo = e.target.result;
-                    localStorage.setItem('nikawan_logo', companyLogo);
-                    updateLogoUI(companyLogo);
-                };
+                reader.onload = (e) => { companyLogo = e.target.result; localStorage.setItem('nikawan_logo', companyLogo); updateLogoUI(companyLogo); };
                 reader.readAsDataURL(file);
             }
         }
 
         function updateLogoUI(src) {
             if(!src) return;
-            const loginImg = document.getElementById('loginLogoImg');
-            const loginText = document.getElementById('loginLogoText');
-            loginImg.src = src; loginImg.style.display = 'block'; loginText.style.display = 'none';
-            
-            const sideImg = document.getElementById('sidebarLogo');
-            const sideText = document.getElementById('sidebarBrandText');
-            sideImg.src = src; sideImg.style.display = 'block'; sideText.style.display = 'none';
+            document.getElementById('loginLogoImg').src = src; document.getElementById('loginLogoImg').style.display = 'block'; document.getElementById('loginLogoText').style.display = 'none';
+            document.getElementById('sidebarLogo').src = src; document.getElementById('sidebarLogo').style.display = 'block'; document.getElementById('sidebarBrandText').style.display = 'none';
         }
 
-        function applyBranding() {
-            if(companyLogo) {
-                updateLogoUI(companyLogo);
-            } else {
-                // Path absolut untuk GitHub Pages
-                updateLogoUI('/nikawan-erp/logo.png');
-            }
-        }
+        function applyBranding() { if(companyLogo) updateLogoUI(companyLogo); else updateLogoUI('/nikawan-erp/logo.png'); }
 
         async function saveBranding() {
             const logoInput = document.getElementById('setLogo');
@@ -316,21 +293,15 @@
                 companySignature = r; localStorage.setItem('nikawan_sig', r);
                 await sb.from('settings').upsert({ key: 'signature_base64', value: r });
             }
-            updateLogoUI(companyLogo);
-            alert('Brand berhasil disimpan!');
-            closeModal('settingsModal');
+            updateLogoUI(companyLogo); alert('Brand berhasil disimpan!'); closeModal('settingsModal');
         }
 
         function previewImage(input, id) {
-            if(input.files[0]) {
-                const r = new FileReader();
-                r.onload = e => { document.getElementById(id).src = e.target.result; document.getElementById(id).style.display = 'block'; };
-                r.readAsDataURL(input.files[0]);
-            }
+            if(input.files[0]) { const r = new FileReader(); r.onload = e => { document.getElementById(id).src = e.target.result; document.getElementById(id).style.display = 'block'; }; r.readAsDataURL(input.files[0]); }
         }
 
         // ==========================================
-        // NAVIGATION & RENDERING (FIXED CLICK EVENT)
+        // NAVIGATION & RENDERING
         // ==========================================
         function navigate(page) {
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -342,7 +313,6 @@
             showLoading(true);
             const { data, error } = await sb.from('customers').select('*').eq('status', 'active').order('created_at', { ascending: false });
             showLoading(false);
-            
             if(error) return alert(error.message);
 
             const container = document.getElementById('appContent');
@@ -353,7 +323,6 @@
                 </div>
                 <div class="client-grid" id="clientGridContainer">
                     ${data.map(c => `
-                        <!-- PERHATIAN: Kita tambahkan ID unik pada setiap kartu -->
                         <div id="card-${c.id}" class="client-card" onclick="selectClient('${c.id}')">
                             <div class="client-name">${c.name}</div>
                             <div class="client-pic">PIC: ${c.pic || '-'}</div>
@@ -365,90 +334,57 @@
             `;
         }
 
-        // FUNGSI selectClient YANG SUDAH DIPERBAIKI (TANPA EVENT.CURRENTTARGET)
         async function selectClient(clientId) {
             selectedClientId = clientId;
             showLoading(true);
             
-            // 1. Highlight Kartu yang Dipilih (Tanpa pakai 'event')
             document.querySelectorAll('.client-card').forEach(card => card.classList.remove('selected'));
             const activeCard = document.getElementById(`card-${clientId}`);
             if(activeCard) activeCard.classList.add('selected');
 
-            // 2. Ambil Data Proyek
-            const { data: proj, error: projErr } = await sb.from('projects').select('*').eq('customer_id', clientId).single();
-            
-            // PGRST116 = No rows found (ini wajar kalau belum ada proyek)
-            if (projErr && projErr.code !== 'PGRST116') {
-                console.error(projErr);
-            }
-            
+            const { data: proj } = await sb.from('projects').select('*').eq('customer_id', clientId).single();
             currentProjectId = proj?.id;
 
-            // 3. Ambil Data Dokumen (jika ada proyek)
             let docs = [];
-            if(proj?.id) {
-                const { data: docData } = await sb.from('documents').select('*').eq('project_id', proj.id);
-                docs = docData || [];
-            }
+            if(proj?.id) { const { data: docData } = await sb.from('documents').select('*').eq('project_id', proj.id); docs = docData || []; }
 
             showLoading(false);
-
             const area = document.getElementById('workflowArea');
             area.style.display = 'block';
 
-            // 4. Tampilan Jika BELUM ADA Proyek
             if(!proj) {
                 area.innerHTML = `
                     <div style="text-align:center; padding:60px; background:white; border-radius:16px; border:1px solid var(--border); margin-top:20px; animation: slideUp 0.4s ease;">
                         <i class="fas fa-folder-open" style="font-size:48px; color:var(--text-muted); margin-bottom:20px; opacity:0.5;"></i>
                         <h3 style="margin-bottom:10px; color:var(--text-main);">Belum Ada Proyek Aktif</h3>
                         <p style="color:var(--text-muted); margin-bottom:25px;">Mulai alur kerja untuk client ini dengan membuat proyek pertama.</p>
-                        <button class="btn btn-primary" onclick="startProject('${clientId}')"><i class="fas fa-plus"></i> Mulai Proyek Baru</button>
+                        <button class="btn btn-primary" onclick="openProjectModal('${clientId}')"><i class="fas fa-plus"></i> Mulai Proyek Baru</button>
                     </div>`;
                 area.scrollIntoView({ behavior: 'smooth' });
                 return;
             }
 
-            // 5. Tampilan Jika SUDAH ADA Proyek (Workflow Stepper & Arsip)
+            // Render Workflow Stepper & Action Panel (Sama seperti sebelumnya)
             const stages = ['penawaran','po','pengerjaan','bast','invoice','bayar','selesai'];
             const currentStageIdx = stages.indexOf(proj.current_stage);
             const progressWidth = (currentStageIdx / (stages.length - 1)) * 100;
 
             area.innerHTML = `
                 <div style="background:white; padding:30px; border-radius:16px; border:1px solid var(--border); margin-top:20px; animation: slideUp 0.4s ease;">
-                    
-                    <!-- WORKFLOW STEPPER VISUAL -->
                     <div style="display: flex; align-items: center; justify-content: space-between; margin: 40px 0; position: relative; padding: 0 20px;">
                         <div style="position: absolute; top: 15px; left: 40px; right: 40px; height: 3px; background: var(--border); z-index: 0;"></div>
                         <div style="position: absolute; top: 15px; left: 40px; height: 3px; background: var(--nikawan-blue); z-index: 1; transition: width 0.6s ease; width: calc(${progressWidth}% - ${progressWidth === 100 ? 0 : 40}px);"></div>
-                        
                         ${stages.map((s, idx) => {
-                            let statusClass = '';
-                            if (idx < currentStageIdx) statusClass = 'completed';
-                            else if (idx === currentStageIdx) statusClass = 'current';
-                            
-                            const iconMap = {
-                                'penawaran': 'fa-file-invoice', 'po': 'fa-envelope', 'pengerjaan': 'fa-hard-hat',
-                                'bast': 'fa-signature', 'invoice': 'fa-receipt', 'bayar': 'fa-money-bill', 'selesai': 'fa-check-circle'
-                            };
-
-                            return `
-                            <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: ${idx <= currentStageIdx ? 1 : 0.4};">
-                                <div style="width: 32px; height: 32px; border-radius: 50%; background: white; border: 3px solid ${idx <= currentStageIdx ? 'var(--nikawan-blue)' : 'var(--border)'}; display: flex; align-items: center; justify-content: center; font-size: 14px; color: ${idx <= currentStageIdx ? 'var(--nikawan-blue)' : 'var(--text-muted)'};">
-                                    <i class="fas ${iconMap[s]}"></i>
-                                </div>
+                            const iconMap = {'penawaran': 'fa-file-invoice', 'po': 'fa-envelope', 'pengerjaan': 'fa-hard-hat', 'bast': 'fa-signature', 'invoice': 'fa-receipt', 'bayar': 'fa-money-bill', 'selesai': 'fa-check-circle'};
+                            return `<div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: ${idx <= currentStageIdx ? 1 : 0.4};">
+                                <div style="width: 32px; height: 32px; border-radius: 50%; background: white; border: 3px solid ${idx <= currentStageIdx ? 'var(--nikawan-blue)' : 'var(--border)'}; display: flex; align-items: center; justify-content: center; font-size: 14px; color: ${idx <= currentStageIdx ? 'var(--nikawan-blue)' : 'var(--text-muted)'};"><i class="fas ${iconMap[s]}"></i></div>
                                 <div style="font-size: 10px; font-weight: bold; text-transform: uppercase; color: var(--text-muted);">${s}</div>
                             </div>`;
                         }).join('')}
                     </div>
 
-                    <!-- ACTION PANEL -->
                     <div style="display:flex; justify-content:space-between; align-items: flex-start; margin-bottom:25px; padding-bottom: 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 15px;">
-                        <div>
-                            <h2 style="color:var(--nikawan-blue); margin-bottom: 5px;">${proj.project_number}</h2>
-                            <p style="color:var(--text-muted); font-size: 14px;">Tahap: <span style="font-weight:bold; color:var(--nikawan-blue); text-transform:capitalize;">${proj.current_stage}</span> | Nilai: Rp ${proj.value.toLocaleString()}</p>
-                        </div>
+                        <div><h2 style="color:var(--nikawan-blue); margin-bottom: 5px;">${proj.project_number}</h2><p style="color:var(--text-muted); font-size: 14px;">Tahap: <span style="font-weight:bold; color:var(--nikawan-blue); text-transform:capitalize;">${proj.current_stage}</span> | Nilai: Rp ${proj.value.toLocaleString()}</p></div>
                         <div style="display:flex; gap:10px;">
                             <button class="btn btn-outline" onclick="document.getElementById('uploadModal').style.display='flex'"><i class="fas fa-upload"></i> Upload Dokumen</button>
                             <button class="btn btn-outline" onclick="generateTemplate()"><i class="fas fa-print"></i> Cetak Surat</button>
@@ -456,23 +392,12 @@
                         </div>
                     </div>
                     
-                    <!-- DESKRIPSI -->
-                    <div style="margin-bottom:30px;">
-                        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:8px; font-weight:600;">Deskripsi Pekerjaan</label>
-                        <div style="background:#F8FAFC; padding:15px; border-radius:12px; font-size:14px; border:1px solid var(--border);">${proj.description || '-'}</div>
-                    </div>
+                    <div style="margin-bottom:30px;"><label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:8px; font-weight:600;">Deskripsi Pekerjaan</label><div style="background:#F8FAFC; padding:15px; border-radius:12px; font-size:14px; border:1px solid var(--border);">${proj.description || '-'}</div></div>
 
-                    <!-- ARSIP DOKUMEN -->
                     <h4 style="margin:20px 0 15px; color:var(--nikawan-blue); font-size: 16px;"><i class="fas fa-folder-open" style="margin-right:8px;"></i>Arsip Dokumen</h4>
                     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:15px;">
                         ${docs.length === 0 ? '<p style="color:var(--text-muted); grid-column: 1/-1; text-align:center; padding: 20px; background:#F8FAFC; border-radius:12px;">Belum ada dokumen terupload.</p>' : 
-                        docs.map(d => `
-                            <div style="background:#F8FAFC; padding:15px; border-radius:12px; border:1px solid var(--border); cursor:pointer; transition:0.2s;" onmouseover="this.style.borderColor='var(--nikawan-blue)'" onmouseout="this.style.borderColor='var(--border)'" onclick="window.open('${d.drive_url || '#'}','_blank')">
-                                <i class="fas fa-file-pdf" style="font-size:24px; color:var(--nikawan-blue); margin-bottom:10px;"></i>
-                                <div style="font-weight:bold; font-size:13px; margin-bottom:4px;">${d.doc_type}</div>
-                                <div style="font-size:11px; color:var(--text-muted);">${d.doc_number}</div>
-                            </div>
-                        `).join('')}
+                        docs.map(d => `<div style="background:#F8FAFC; padding:15px; border-radius:12px; border:1px solid var(--border); cursor:pointer; transition:0.2s;" onmouseover="this.style.borderColor='var(--nikawan-blue)'" onmouseout="this.style.borderColor='var(--border)'" onclick="window.open('${d.drive_url || '#'}','_blank')"><i class="fas fa-file-pdf" style="font-size:24px; color:var(--nikawan-blue); margin-bottom:10px;"></i><div style="font-weight:bold; font-size:13px; margin-bottom:4px;">${d.doc_type}</div><div style="font-size:11px; color:var(--text-muted);">${d.doc_number}</div></div>`).join('')}
                     </div>
                 </div>
             `;
@@ -480,42 +405,68 @@
         }
 
         // ==========================================
-        // ACTIONS
+        // ACTIONS & FORM LOGIC
         // ==========================================
         async function openAddClientModal() {
             const name = prompt('Nama Perusahaan:');
             if(name) {
                 showLoading(true);
-                const { error } = await sb.from('customers').insert({ name, pic: prompt('PIC:') || '', email: prompt('Email:') || '' });
-                showLoading(false);
-                if(error) alert('Gagal tambah client: ' + error.message);
-                else renderClients();
-            }
-        }
-
-        async function deleteClient(id) {
-            if(confirm('Hapus client?')) {
-                showLoading(true);
-                await sb.from('customers').update({ status: 'deleted' }).eq('id', id);
+                await sb.from('customers').insert({ name, pic: prompt('PIC:') || '', email: prompt('Email:') || '' });
                 showLoading(false);
                 renderClients();
             }
         }
 
-        async function startProject(clientId) {
-            const num = prompt('Nomor Proyek:');
-            const val = prompt('Nilai Proyek (Rp):');
-            if(num && val) {
-                showLoading(true);
-                const { error } = await sb.from('projects').insert({ 
-                    customer_id: clientId, 
-                    project_number: num, 
-                    value: parseInt(val), 
-                    description: prompt('Deskripsi:') || '' 
-                });
+        async function deleteClient(id) {
+            if(confirm('Hapus client?')) { await sb.from('customers').update({ status: 'deleted' }).eq('id', id); renderClients(); }
+        }
+
+        // --- LOGIKA FORM PROYEK BARU ---
+        async function openProjectModal(clientId) {
+            tempClientIdForProject = clientId;
+            showLoading(true);
+            
+            // Panggil fungsi RPC untuk mendapatkan nomor otomatis
+            const { data: autoNum, error } = await sb.rpc('generate_project_number');
+            
+            if (error) {
+                console.error(error);
+                alert('Gagal生成 nomor otomatis. Pastikan fungsi generate_project_number sudah dibuat di SQL Editor Supabase.');
                 showLoading(false);
-                if(error) alert('Gagal mulai proyek: ' + error.message);
-                else selectClient(clientId); // Refresh view
+                return;
+            }
+
+            // Isi field nomor proyek secara otomatis
+            document.getElementById('projNumber').value = autoNum;
+            document.getElementById('projValue').value = '';
+            document.getElementById('projDesc').value = '';
+            
+            showLoading(false);
+            document.getElementById('projectModal').style.display = 'flex';
+        }
+
+        async function submitNewProject() {
+            const num = document.getElementById('projNumber').value;
+            const val = document.getElementById('projValue').value;
+            const desc = document.getElementById('projDesc').value;
+
+            if(!val) return alert('Nilai proyek wajib diisi');
+
+            showLoading(true);
+            const { error } = await sb.from('projects').insert({ 
+                customer_id: tempClientIdForProject, 
+                project_number: num, 
+                value: parseInt(val), 
+                description: desc || '-' 
+            });
+            
+            showLoading(false);
+            if(error) {
+                console.error(error);
+                alert('Gagal menyimpan proyek: ' + error.message);
+            } else {
+                closeModal('projectModal');
+                selectClient(tempClientIdForProject); // Refresh view ke mode workflow
             }
         }
 
@@ -527,56 +478,36 @@
                 showLoading(true);
                 await sb.from('projects').update({ current_stage: stages[idx+1] }).eq('id', projId);
                 showLoading(false);
-                selectClient(selectedClientId); // Refresh view
+                selectClient(selectedClientId);
             }
         }
 
         async function handleUploadFile() {
             const file = document.getElementById('upFile').files[0];
             const docType = document.getElementById('upDocType').value;
-            
             if(!file || !currentProjectId) return alert('Pilih file dan pastikan proyek aktif');
 
             showLoading(true);
-            
             try {
-                // 1. Upload to Supabase Storage
                 const fileName = `${currentProjectId}/${Date.now()}_${file.name}`;
-                const { data: uploadData, error: uploadErr } = await sb.storage.from('documents').upload(fileName, file);
-                
+                const { error: uploadErr } = await sb.storage.from('documents').upload(fileName, file);
                 if(uploadErr) throw uploadErr;
 
-                // 2. Get Public URL
                 const { data: urlData } = sb.storage.from('documents').getPublicUrl(fileName);
                 
-                // 3. Generate Auto Number if empty
                 let docNum = document.getElementById('upDocNumber').value;
                 if(!docNum) {
                     const prefix = docType.substring(0,3).toUpperCase();
-                    const { data: seqData, error: seqErr } = await sb.rpc('get_next_doc_number', { prefix: prefix });
-                    if(seqErr) throw seqErr;
+                    const { data: seqData } = await sb.rpc('get_next_doc_number', { prefix: prefix });
                     docNum = seqData;
                 }
 
-                // 4. Save Metadata to DB
-                const { error: insertErr } = await sb.from('documents').insert({
-                    project_id: currentProjectId,
-                    doc_type: docType,
-                    doc_number: docNum,
-                    drive_file_id: fileName,
-                    drive_url: urlData.publicUrl
-                });
-
-                if(insertErr) throw insertErr;
-
+                await sb.from('documents').insert({ project_id: currentProjectId, doc_type: docType, doc_number: docNum, drive_file_id: fileName, drive_url: urlData.publicUrl });
                 alert('Dokumen berhasil diupload!');
                 closeModal('uploadModal');
-                selectClient(selectedClientId); // Refresh view
-            } catch(err) {
-                alert('Gagal upload: ' + err.message);
-            } finally {
-                showLoading(false);
-            }
+                selectClient(selectedClientId);
+            } catch(err) { alert('Gagal upload: ' + err.message); } 
+            finally { showLoading(false); }
         }
 
         // --- USER MANAGEMENT ---
@@ -590,12 +521,9 @@
             const p = document.getElementById('newPassword').value;
             const n = document.getElementById('newFullName').value;
             const r = document.getElementById('newRole').value;
-
             if(!u || !p || !n) return alert('Lengkapi semua data');
-
             showLoading(true);
             const { error } = await sb.rpc('register_user', { p_username: u, p_password: p, p_fullname: n, p_role: r });
-            
             showLoading(false);
             if(error) alert('Gagal: ' + error.message);
             else { alert('User berhasil ditambahkan'); closeModal('userModal'); }
@@ -604,41 +532,24 @@
         // --- TEMPLATE GENERATOR ---
         async function generateTemplate() {
             if(!currentProjectId) return alert('Tidak ada proyek aktif');
-            
             showLoading(true);
             const { data: proj, error } = await sb.from('projects').select('*, customers(*)').eq('id', currentProjectId).single();
             showLoading(false);
-
-            if(error || !proj) return alert('Gagal memuat data proyek: ' + (error?.message || 'Proyek tidak ditemukan'));
+            if(error || !proj) return alert('Gagal memuat data proyek');
 
             const today = new Date().toLocaleDateString('id-ID', { year:'numeric', month:'long', day:'numeric' });
-            
             const logoTag = companyLogo ? `<img src="${companyLogo}">` : '';
             const sigTag = companySignature ? `<img src="${companySignature}" style="max-height:60px;">` : '<div style="height:60px;"></div>';
 
             document.getElementById('printArea').innerHTML = `
-                <div class="letter-head">
-                    ${logoTag}
-                    <h1>PT NIKAWAN SOLUSINDO SEJAHTERA</h1>
-                    <p>Ruko Sindangsari, Kp. Leles RT 04 RW 07 Kel. Sindangsari, Kec. Pasarkemis Kab. Tangerang 15562</p>
-                </div>
+                <div class="letter-head">${logoTag}<h1>PT NIKAWAN SOLUSINDO SEJAHTERA</h1><p>Ruko Sindangsari, Kp. Leles RT 04 RW 07 Kel. Sindangsari, Kec. Pasarkemis Kab. Tangerang 15562</p></div>
                 <div class="letter-body">
                     <p>Kepada Yth.<br><b>${proj.customers.name}</b><br>Up. ${proj.customers.pic}<br>di Tempat</p>
                     <p style="margin:20px 0;">Dengan hormat,<br>Bersama ini kami sampaikan penawaran untuk pekerjaan:</p>
-                    <table class="letter-table">
-                        <tr><th>No. Penawaran</th><td>${proj.project_number}</td></tr>
-                        <tr><th>Tanggal</th><td>${today}</td></tr>
-                        <tr><th>Uraian</th><td>${proj.description}</td></tr>
-                        <tr><th>Nilai</th><td style="font-weight:bold; font-size:14pt;">Rp ${proj.value.toLocaleString('id-ID')}</td></tr>
-                    </table>
+                    <table class="letter-table"><tr><th>No. Penawaran</th><td>${proj.project_number}</td></tr><tr><th>Tanggal</th><td>${today}</td></tr><tr><th>Uraian</th><td>${proj.description}</td></tr><tr><th>Nilai</th><td style="font-weight:bold; font-size:14pt;">Rp ${proj.value.toLocaleString('id-ID')}</td></tr></table>
                     <p style="margin-top:30px;">Demikian penawaran ini kami sampaikan. Terima kasih.</p>
                 </div>
-                <div class="letter-footer">
-                    <p style="margin-bottom:60px;">Tangerang, ${today}</p>
-                    <div class="signature-space">${sigTag}</div>
-                    <p style="font-weight:bold;">PT NIKAWAN SOLUSINDO SEJAHTERA</p>
-                    <p>Direktur Utama</p>
-                </div>
+                <div class="letter-footer"><p style="margin-bottom:60px;">Tangerang, ${today}</p><div class="signature-space">${sigTag}</div><p style="font-weight:bold;">PT NIKAWAN SOLUSINDO SEJAHTERA</p><p>Direktur Utama</p></div>
             `;
             setTimeout(() => window.print(), 200);
         }
@@ -661,7 +572,6 @@
                 navigate('clients');
             }
         });
-
         document.getElementById('loginPass').addEventListener('keypress', e => { if(e.key==='Enter') handleLogin(); });
     </script>
 </body>
