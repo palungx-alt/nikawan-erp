@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NIKAWAN ERP V11 - Supabase</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Supabase JS Client -->
+    <!-- Load Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -189,11 +189,27 @@
 
     <script>
         // ==========================================
-        // SUPABASE CONFIGURATION
+        // SUPABASE CONFIGURATION (FIXED FOR LOCAL FILE)
         // ==========================================
         const SUPABASE_URL = 'https://yoffssgzwocphkqpuhpy.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_CCEGEterppLpiZkUnyGYTQ_lFsGBCFu';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // Inisialisasi Client Supabase dengan cara yang aman dari konflik global
+        let supabaseClient;
+        try {
+            if (window.supabase && window.supabase.createClient) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                console.log('Supabase client initialized successfully');
+            } else {
+                throw new Error('Library Supabase belum dimuat');
+            }
+        } catch(e) {
+            console.error('Gagal inisialisasi Supabase:', e);
+            alert('Gagal memuat library Supabase. Cek koneksi internet atau refresh halaman.');
+        }
+
+        // Alias agar kode di bawah tetap jalan tanpa perlu ganti semua 'supabase.' 
+        const sb = supabaseClient; 
 
         let currentUser = null;
         let companyLogo = localStorage.getItem('nikawan_logo') || '';
@@ -217,28 +233,24 @@
 
             showLoading(true);
             try {
-                // Custom auth query because we use pgcrypto
-                const { data, error } = await supabase
+                // Panggil RPC verify_user yang aman di backend
+                const { data: isValid, error: authErr } = await sb.rpc('verify_user', { 
+                    p_username: username, 
+                    p_password: password 
+                });
+                
+                if (authErr || !isValid) throw new Error('Username atau password salah');
+
+                // Ambil data user lengkap
+                const { data: userData, error: userErr } = await sb
                     .from('users')
                     .select('*')
                     .eq('username', username)
                     .single();
 
-                if (error || !data) throw new Error('Username atau password salah');
+                if(userErr) throw new Error('Gagal mengambil data user');
 
-                // Verify password using RPC or client-side check if needed
-                // For simplicity in this demo, we assume backend verifies or use a simple check
-                // NOTE: In production, create an Edge Function for login to securely verify pgcrypto hash
-                
-                // Temporary workaround: Use Supabase Auth or custom RPC
-                // Here we'll simulate successful login for demo structure
-                // REAL IMPLEMENTATION: Create RPC function 'verify_user(username, pass)' in Supabase
-                
-                const { data: isValid, error: authErr } = await supabase.rpc('verify_user', { p_username: username, p_password: password });
-                
-                if (authErr || !isValid) throw new Error('Username atau password salah');
-
-                currentUser = data;
+                currentUser = userData;
                 localStorage.setItem('nikawan_user', JSON.stringify(currentUser));
                 
                 document.getElementById('loginScreen').style.display = 'none';
@@ -246,6 +258,7 @@
                 applyBranding();
                 navigate('clients');
             } catch (err) {
+                console.error(err);
                 errorEl.innerText = err.message;
                 errorEl.style.display = 'block';
             } finally {
@@ -298,12 +311,12 @@
             if (logoInput.files[0]) {
                 const r = await new Promise(res => { const rd = new FileReader(); rd.onload = e => res(e.target.result); rd.readAsDataURL(logoInput.files[0]); });
                 companyLogo = r; localStorage.setItem('nikawan_logo', r);
-                await supabase.from('settings').upsert({ key: 'logo_base64', value: r });
+                await sb.from('settings').upsert({ key: 'logo_base64', value: r });
             }
             if (sigInput.files[0]) {
                 const r = await new Promise(res => { const rd = new FileReader(); rd.onload = e => res(e.target.result); rd.readAsDataURL(sigInput.files[0]); });
                 companySignature = r; localStorage.setItem('nikawan_sig', r);
-                await supabase.from('settings').upsert({ key: 'signature_base64', value: r });
+                await sb.from('settings').upsert({ key: 'signature_base64', value: r });
             }
             updateLogoUI(companyLogo);
             alert('Brand berhasil disimpan!');
@@ -329,7 +342,7 @@
 
         async function renderClients() {
             showLoading(true);
-            const { data, error } = await supabase.from('customers').select('*').eq('status', 'active').order('created_at', { ascending: false });
+            const { data, error } = await sb.from('customers').select('*').eq('status', 'active').order('created_at', { ascending: false });
             showLoading(false);
             
             if(error) return alert(error.message);
@@ -358,14 +371,21 @@
             showLoading(true);
             
             // Get Project
-            const { data: proj } = await supabase.from('projects').select('*').eq('customer_id', clientId).single();
+            const { data: proj } = await sb.from('projects').select('*').eq('customer_id', clientId).single();
             currentProjectId = proj?.id;
 
             // Get Docs
-            const { data: docs } = await supabase.from('documents').select('*').eq('project_id', proj?.id || '0000');
+            let docs = [];
+            if(proj?.id) {
+                const { data: docData } = await sb.from('documents').select('*').eq('project_id', proj.id);
+                docs = docData || [];
+            }
 
             showLoading(false);
-            renderClientGrid(); // Update selection highlight
+            
+            // Update selection visual
+            document.querySelectorAll('.client-card').forEach(card => card.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
 
             const area = document.getElementById('workflowArea');
             area.style.display = 'block';
@@ -377,7 +397,7 @@
 
             area.innerHTML = `
                 <div style="background:white; padding:30px; border-radius:16px; border:1px solid var(--border); margin-top:20px;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
                         <div>
                             <h2 style="color:var(--nikawan-blue);">${proj.project_number}</h2>
                             <p style="color:var(--text-muted);">Tahap: ${proj.current_stage} | Nilai: Rp ${proj.value.toLocaleString()}</p>
@@ -391,7 +411,8 @@
                     
                     <h4 style="margin:20px 0 10px; color:var(--nikawan-blue);">Arsip Dokumen</h4>
                     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:15px;">
-                        ${docs.map(d => `
+                        ${docs.length === 0 ? '<p style="color:var(--text-muted);">Belum ada dokumen.</p>' : 
+                        docs.map(d => `
                             <div style="background:#F8FAFC; padding:15px; border-radius:12px; border:1px solid var(--border); cursor:pointer;" onclick="window.open('${d.drive_url || '#'}','_blank')">
                                 <i class="fas fa-file-pdf" style="font-size:24px; color:var(--nikawan-blue); margin-bottom:10px;"></i>
                                 <div style="font-weight:bold; font-size:13px;">${d.doc_type}</div>
@@ -404,15 +425,6 @@
             area.scrollIntoView({ behavior: 'smooth' });
         }
 
-        function renderClientGrid() {
-            // Re-render only to update selected class
-            const cards = document.querySelectorAll('.client-card');
-            cards.forEach((card, idx) => {
-                // Logic to match card with selectedClientId would go here
-                // Simplified for brevity: just re-fetch list or toggle class manually
-            });
-        }
-
         // ==========================================
         // ACTIONS
         // ==========================================
@@ -420,7 +432,7 @@
             const name = prompt('Nama Perusahaan:');
             if(name) {
                 showLoading(true);
-                await supabase.from('customers').insert({ name, pic: prompt('PIC:') || '', email: prompt('Email:') || '' });
+                await sb.from('customers').insert({ name, pic: prompt('PIC:') || '', email: prompt('Email:') || '' });
                 showLoading(false);
                 renderClients();
             }
@@ -428,7 +440,7 @@
 
         async function deleteClient(id) {
             if(confirm('Hapus client?')) {
-                await supabase.from('customers').update({ status: 'deleted' }).eq('id', id);
+                await sb.from('customers').update({ status: 'deleted' }).eq('id', id);
                 renderClients();
             }
         }
@@ -438,31 +450,27 @@
             const val = prompt('Nilai Proyek (Rp):');
             if(num && val) {
                 showLoading(true);
-                await supabase.from('projects').insert({ 
+                await sb.from('projects').insert({ 
                     customer_id: clientId, 
                     project_number: num, 
                     value: parseInt(val), 
                     description: prompt('Deskripsi:') || '' 
                 });
                 showLoading(false);
-                selectClient(clientId);
+                selectClient(document.querySelector(`.client-card[onclick*="${clientId}"]`));
             }
         }
 
         async function advanceStage(projId) {
             const stages = ['penawaran','po','pengerjaan','bast','invoice','bayar','selesai'];
-            const { data: proj } = await supabase.from('projects').select('current_stage').eq('id', projId).single();
+            const { data: proj } = await sb.from('projects').select('current_stage').eq('id', projId).single();
             const idx = stages.indexOf(proj.current_stage);
             if(idx < stages.length - 1) {
-                await supabase.from('projects').update({ current_stage: stages[idx+1] }).eq('id', projId);
-                selectClient(selectedClientId);
+                await sb.from('projects').update({ current_stage: stages[idx+1] }).eq('id', projId);
+                selectClient(document.querySelector('.client-card.selected'));
             }
         }
 
-        // --- UPLOAD TO GOOGLE DRIVE VIA EDGE FUNCTION OR DIRECT API ---
-        // Note: Direct upload from browser to GDrive requires OAuth token.
-        // Best practice: Upload to Supabase Storage first, then trigger GDrive sync via Edge Function.
-        // For this demo, we simulate saving metadata to Supabase.
         async function handleUploadFile() {
             const file = document.getElementById('upFile').files[0];
             const docType = document.getElementById('upDocType').value;
@@ -471,40 +479,46 @@
 
             showLoading(true);
             
-            // 1. Upload to Supabase Storage (as temp holding)
-            const fileName = `${currentProjectId}/${Date.now()}_${file.name}`;
-            const { data: uploadData, error: uploadErr } = await supabase.storage.from('documents').upload(fileName, file);
-            
-            if(uploadErr) { showLoading(false); return alert('Gagal upload: ' + uploadErr.message); }
+            try {
+                // 1. Upload to Supabase Storage
+                const fileName = `${currentProjectId}/${Date.now()}_${file.name}`;
+                const { data: uploadData, error: uploadErr } = await sb.storage.from('documents').upload(fileName, file);
+                
+                if(uploadErr) throw uploadErr;
 
-            // 2. Get Public URL
-            const { data: urlData } = supabase.storage.from('documents').getPublicUrl(fileName);
-            
-            // 3. Generate Auto Number if empty
-            let docNum = document.getElementById('upDocNumber').value;
-            if(!docNum) {
-                const { data: seqData } = await supabase.rpc('get_next_doc_number', { prefix: docType.substring(0,3).toUpperCase() });
-                docNum = seqData;
+                // 2. Get Public URL
+                const { data: urlData } = sb.storage.from('documents').getPublicUrl(fileName);
+                
+                // 3. Generate Auto Number if empty
+                let docNum = document.getElementById('upDocNumber').value;
+                if(!docNum) {
+                    const prefix = docType.substring(0,3).toUpperCase();
+                    const { data: seqData } = await sb.rpc('get_next_doc_number', { prefix: prefix });
+                    docNum = seqData;
+                }
+
+                // 4. Save Metadata to DB
+                await sb.from('documents').insert({
+                    project_id: currentProjectId,
+                    doc_type: docType,
+                    doc_number: docNum,
+                    drive_file_id: fileName,
+                    drive_url: urlData.publicUrl
+                });
+
+                alert('Dokumen berhasil diupload!');
+                closeModal('uploadModal');
+                selectClient(document.querySelector('.client-card.selected'));
+            } catch(err) {
+                alert('Gagal upload: ' + err.message);
+            } finally {
+                showLoading(false);
             }
-
-            // 4. Save Metadata to DB
-            await supabase.from('documents').insert({
-                project_id: currentProjectId,
-                doc_type: docType,
-                doc_number: docNum,
-                drive_file_id: fileName, // Using Supabase path as reference for now
-                drive_url: urlData.publicUrl
-            });
-
-            showLoading(false);
-            alert('Dokumen berhasil diupload!');
-            closeModal('uploadModal');
-            selectClient(selectedClientId);
         }
 
         // --- USER MANAGEMENT ---
         async function openUserModal() {
-            if(currentUser.role !== 'super_admin') return alert('Akses ditolak');
+            if(currentUser.role !== 'super_admin') return alert('Akses ditolak. Hanya Super Admin.');
             document.getElementById('userModal').style.display = 'flex';
         }
 
@@ -517,12 +531,7 @@
             if(!u || !p || !n) return alert('Lengkapi semua data');
 
             showLoading(true);
-            // Hash password before inserting (Use RPC in production)
-            // For demo, we insert plain and rely on RPC verify later, or hash client-side if library available
-            // Ideally: Call RPC 'register_user(u,p,n,r)' which handles crypt()
-            
-            // Simulating secure insert via RPC
-            const { error } = await supabase.rpc('register_user', { p_username: u, p_password: p, p_fullname: n, p_role: r });
+            const { error } = await sb.rpc('register_user', { p_username: u, p_password: p, p_fullname: n, p_role: r });
             
             showLoading(false);
             if(error) alert('Gagal: ' + error.message);
@@ -531,8 +540,14 @@
 
         // --- TEMPLATE GENERATOR ---
         async function generateTemplate() {
-            if(!currentProjectId) return;
-            const { data: proj } = await supabase.from('projects').select('*, customers(*)').eq('id', currentProjectId).single();
+            if(!currentProjectId) return alert('Tidak ada proyek aktif');
+            
+            showLoading(true);
+            const { data: proj, error } = await sb.from('projects').select('*, customers(*)').eq('id', currentProjectId).single();
+            showLoading(false);
+
+            if(error || !proj) return alert('Gagal memuat data proyek');
+
             const today = new Date().toLocaleDateString('id-ID', { year:'numeric', month:'long', day:'numeric' });
             
             const logoTag = companyLogo ? `<img src="${companyLogo}">` : '';
