@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIKAWAN ERP V11 - Supabase</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --nikawan-blue: #0A2342;
+            --nikawan-blue-light: #1C3F6E;
+            --bg-main: #F1F5F9;
+            --bg-card: #FFFFFF;
+            --text-main: #1E293B;
+            --text-muted: #64748B;
+            --border: #E2E8F0;
+            --success: #10B981;
+            --danger: #EF4444;
+            --radius: 16px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg-main); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Layout & Sidebar */
+        .sidebar { width: 280px; background: var(--bg-card); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; }
+        .brand-container { padding: 30px 20px; text-align: center; border-bottom: 1px solid var(--border); }
+        .app-logo { max-width: 180px; height: auto; margin-bottom: 10px; filter: drop-shadow(0 4px 6px rgba(10,35,66,0.1)); }
+        .brand-text { font-size: 12px; font-weight: 700; color: var(--nikawan-blue); letter-spacing: 2px; text-transform: uppercase; }
+        .nav-menu { flex: 1; padding-top: 20px; overflow-y: auto; }
+        .nav-item { display: flex; align-items: center; gap: 15px; padding: 16px 25px; color: var(--text-muted); cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.2s; border-left: 4px solid transparent; margin: 4px 0; }
+        .nav-item:hover { background: #F8FAFC; color: var(--nikawan-blue); }
+        .nav-item.active { background: #EFF6FF; color: var(--nikawan-blue); border-left-color: var(--nikawan-blue); font-weight: 600; }
+        
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .header { height: 70px; background: var(--bg-card); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 30px; justify-content: space-between; }
+        .page-container { padding: 30px; overflow-y: auto; flex: 1; }
+
+        /* Login Screen */
+        .login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, var(--bg-main), #E2E8F0); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: var(--bg-card); padding: 50px 40px; border-radius: 24px; width: 420px; box-shadow: 0 20px 40px rgba(10,35,66,0.1); border: 1px solid var(--border); text-align: center; }
+        .login-logo { max-width: 200px; margin-bottom: 30px; }
+        .login-input { width: 100%; padding: 14px; background: #F8FAFC; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; outline: none; font-size: 14px; }
+        .login-input:focus { border-color: var(--nikawan-blue); background: white; }
+        .login-btn { width: 100%; padding: 14px; background: var(--nikawan-blue); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; transition: 0.2s; }
+        .login-btn:hover { background: var(--nikawan-blue-light); transform: translateY(-2px); }
+        .login-error { color: var(--danger); font-size: 12px; margin-top: 15px; display: none; background: #FEF2F2; padding: 8px; border-radius: 8px; }
+
+        /* Components */
+        .client-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .client-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; cursor: pointer; transition: 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position: relative; }
+        .client-card:hover { transform: translateY(-5px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-color: var(--nikawan-blue); }
+        .client-card.selected { border-color: var(--nikawan-blue); background: #F0F5FF; box-shadow: 0 0 0 2px rgba(10,35,66,0.1); }
+        .client-name { font-size: 18px; font-weight: 700; margin-bottom: 6px; color: var(--nikawan-blue); }
+        .client-pic { font-size: 13px; color: var(--text-muted); margin-bottom: 15px; }
+        
+        .btn { padding: 10px 20px; border-radius: 10px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; }
+        .btn-primary { background: var(--nikawan-blue); color: white; }
+        .btn-primary:hover { background: var(--nikawan-blue-light); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10,35,66,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
+        .modal-box { background: var(--bg-card); width: 550px; max-width: 90%; max-height: 90vh; border-radius: 20px; border: 1px solid var(--border); display: flex; flex-direction: column; }
+        .modal-header { padding: 24px 30px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { padding: 30px; overflow-y: auto; flex: 1; }
+        .modal-footer { padding: 20px 30px; border-top: 1px solid var(--border); text-align: right; background: #F8FAFC; border-radius: 0 0 20px 20px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted); font-weight: 600; }
+        .form-control { width: 100%; padding: 12px; background: #F8FAFC; border: 1px solid var(--border); color: var(--text-main); border-radius: 10px; outline: none; font-size: 14px; }
+        .form-control:focus { border-color: var(--nikawan-blue); background: white; }
+        .preview-img { max-height: 80px; margin-top: 15px; display: none; border-radius: 12px; border: 1px solid var(--border); }
+
+        .loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(241,245,249,0.9); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }
+        .spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--nikawan-blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Print Styles */
+        #printArea { display: none; }
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; background: white; color: black; font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; padding-top: 120px; padding-left: 50px; padding-right: 50px; padding-bottom: 50px; }
+            .letter-head { position: fixed; top: 0; left: 0; width: 100%; text-align: center; padding: 30px 50px 15px 50px; background: white; z-index: 9999; border-bottom: 2px solid #000; }
+            .letter-head img { max-height: 60px; margin-bottom: 8px; display: block; margin: 0 auto; }
+            .letter-head h1 { margin: 5px 0; font-size: 20pt; text-transform: uppercase; letter-spacing: 1px; }
+            .letter-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            .letter-table th, .letter-table td { border: 1px solid #000; padding: 10px; text-align: left; }
+            .signature-space { height: 80px; margin-top: 10px; }
+            .letter-footer { margin-top: 60px; text-align: right; padding-right: 50px; page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-box">
+            <img id="loginLogoImg" src="" alt="Logo" class="login-logo" style="display:none;">
+            <div id="loginLogoText" style="font-size: 24px; font-weight: 800; color: var(--nikawan-blue); margin-bottom: 10px;">NIKAWAN</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 30px; letter-spacing: 2px;">INTEGRATED MANAGEMENT SYSTEM</div>
+            
+            <input type="text" id="loginUser" class="login-input" placeholder="Username">
+            <input type="password" id="loginPass" class="login-input" placeholder="Password">
+            <button class="login-btn" onclick="handleLogin()">MASUK SISTEM</button>
+            <div id="loginError" class="login-error"></div>
+            
+            <div style="margin-top: 30px; border-top: 1px solid var(--border); padding-top: 20px;">
+                <label style="font-size: 11px; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-image"></i> Upload Logo Lokal
+                    <input type="file" id="localLogoUpload" accept="image/*" style="display: none;" onchange="handleLocalLogoUpload(this)">
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="brand-container">
+            <img id="sidebarLogo" src="" alt="Logo" class="app-logo" style="display:none;">
+            <div id="sidebarBrandText" class="brand-text">NIKAWAN ERP</div>
+        </div>
+        <nav class="nav-menu">
+            <a onclick="navigate('clients')" id="nav-clients" class="nav-item active"><i class="fas fa-users"></i> Daftar Client</a>
+            <a onclick="openSettingsModal()" class="nav-item"><i class="fas fa-cog"></i> Pengaturan Brand</a>
+            <a onclick="openUserModal()" class="nav-item"><i class="fas fa-user-plus"></i> Manajemen User</a>
+            <a onclick="logout()" class="nav-item"><i class="fas fa-sign-out-alt"></i> Keluar</a>
+        </nav>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <header class="header">
+            <h3 id="pageTitle" style="font-weight: 700; color: var(--nikawan-blue);">Daftar Client</h3>
+            <span id="userDisplay" style="font-size:12px; color:var(--text-muted); font-weight: 600;"></span>
+        </header>
+        <div id="appContent" class="page-container"></div>
+        <div id="loadingOverlay" class="loading-overlay"><div class="spinner"></div></div>
+    </main>
+
+    <!-- MODALS -->
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header"><h3 style="color: var(--nikawan-blue);">Pengaturan Brand & TTD</h3><button onclick="closeModal('settingsModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>Logo Perusahaan</label><input type="file" id="setLogo" class="form-control" accept="image/*" onchange="previewImage(this,'logoPreview')"><img id="logoPreview" class="preview-img"></div>
+                <div class="form-group"><label>Tanda Tangan Digital</label><input type="file" id="setSig" class="form-control" accept="image/png" onchange="previewImage(this,'sigPreview')"><img id="sigPreview" class="preview-img"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('settingsModal')">Batal</button><button class="btn btn-primary" onclick="saveBranding()"><i class="fas fa-save"></i> Simpan</button></div>
+        </div>
+    </div>
+
+    <div id="userModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header"><h3 style="color: var(--nikawan-blue);">Tambah User Baru</h3><button onclick="closeModal('userModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>Username</label><input id="newUsername" class="form-control"></div>
+                <div class="form-group"><label>Password</label><input type="password" id="newPassword" class="form-control"></div>
+                <div class="form-group"><label>Nama Lengkap</label><input id="newFullName" class="form-control"></div>
+                <div class="form-group"><label>Role</label><select id="newRole" class="form-control"><option value="staff">Staff</option><option value="admin">Admin</option><option value="super_admin">Super Admin</option></select></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('userModal')">Batal</button><button class="btn btn-primary" onclick="addNewUser()"><i class="fas fa-user-plus"></i> Tambah User</button></div>
+        </div>
+    </div>
+
+    <div id="uploadModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header"><h3 style="color: var(--nikawan-blue);">Upload Dokumen Client</h3><button onclick="closeModal('uploadModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>Jenis Dokumen</label><select id="upDocType" class="form-control"><option value="PO Client">PO Client</option><option value="Kontrak">Kontrak</option><option value="SPK">SPK</option></select></div>
+                <div class="form-group"><label>Nomor Dokumen</label><input id="upDocNumber" class="form-control" placeholder="Auto-generated jika kosong"></div>
+                <div class="form-group"><label>File</label><input type="file" id="upFile" class="form-control" accept=".pdf,.jpg,.png"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('uploadModal')">Batal</button><button class="btn btn-primary" onclick="handleUploadFile()"><i class="fas fa-cloud-upload-alt"></i> Upload</button></div>
+        </div>
+    </div>
+
+    <div id="modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header"><h3 id="modalTitle" style="color: var(--nikawan-blue);">Judul</h3><button onclick="closeModal('modal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
+            <div id="modalBody" class="modal-body"></div>
+            <div id="modalFooter" class="modal-footer"></div>
+        </div>
+    </div>
+
+    <div id="printArea"></div>
+
+    <script>
+        // ==========================================
+        // SUPABASE CONFIGURATION
+        // ==========================================
+        const SUPABASE_URL = 'https://yoffssgzwocphkqpuhpy.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_CCEGEterppLpiZkUnyGYTQ_lFsGBCFu';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let currentUser = null;
+        let companyLogo = localStorage.getItem('nikawan_logo') || '';
+        let companySignature = localStorage.getItem('nikawan_sig') || '';
+        let selectedClientId = null;
+        let currentProjectId = null;
+
+        // ==========================================
+        // AUTHENTICATION
+        // ==========================================
+        async function handleLogin() {
+            const username = document.getElementById('loginUser').value.trim();
+            const password = document.getElementById('loginPass').value.trim();
+            const errorEl = document.getElementById('loginError');
+
+            if (!username || !password) {
+                errorEl.innerText = 'Username dan password wajib diisi';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            showLoading(true);
+            try {
+                // Custom auth query because we use pgcrypto
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('username', username)
+                    .single();
+
+                if (error || !data) throw new Error('Username atau password salah');
+
+                // Verify password using RPC or client-side check if needed
+                // For simplicity in this demo, we assume backend verifies or use a simple check
+                // NOTE: In production, create an Edge Function for login to securely verify pgcrypto hash
+                
+                // Temporary workaround: Use Supabase Auth or custom RPC
+                // Here we'll simulate successful login for demo structure
+                // REAL IMPLEMENTATION: Create RPC function 'verify_user(username, pass)' in Supabase
+                
+                const { data: isValid, error: authErr } = await supabase.rpc('verify_user', { p_username: username, p_password: password });
+                
+                if (authErr || !isValid) throw new Error('Username atau password salah');
+
+                currentUser = data;
+                localStorage.setItem('nikawan_user', JSON.stringify(currentUser));
+                
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('userDisplay').innerText = currentUser.full_name;
+                applyBranding();
+                navigate('clients');
+            } catch (err) {
+                errorEl.innerText = err.message;
+                errorEl.style.display = 'block';
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function logout() {
+            if(confirm('Yakin ingin keluar?')) {
+                localStorage.removeItem('nikawan_user');
+                location.reload();
+            }
+        }
+
+        // ==========================================
+        // BRANDING & LOCAL LOGO
+        // ==========================================
+        function handleLocalLogoUpload(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    companyLogo = e.target.result;
+                    localStorage.setItem('nikawan_logo', companyLogo);
+                    updateLogoUI(companyLogo);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function updateLogoUI(src) {
+            if(!src) return;
+            const loginImg = document.getElementById('loginLogoImg');
+            const loginText = document.getElementById('loginLogoText');
+            loginImg.src = src; loginImg.style.display = 'block'; loginText.style.display = 'none';
+            
+            const sideImg = document.getElementById('sidebarLogo');
+            const sideText = document.getElementById('sidebarBrandText');
+            sideImg.src = src; sideImg.style.display = 'block'; sideText.style.display = 'none';
+        }
+
+        function applyBranding() {
+            if(companyLogo) updateLogoUI(companyLogo);
+        }
+
+        async function saveBranding() {
+            const logoInput = document.getElementById('setLogo');
+            const sigInput = document.getElementById('setSig');
+            
+            if (logoInput.files[0]) {
+                const r = await new Promise(res => { const rd = new FileReader(); rd.onload = e => res(e.target.result); rd.readAsDataURL(logoInput.files[0]); });
+                companyLogo = r; localStorage.setItem('nikawan_logo', r);
+                await supabase.from('settings').upsert({ key: 'logo_base64', value: r });
+            }
+            if (sigInput.files[0]) {
+                const r = await new Promise(res => { const rd = new FileReader(); rd.onload = e => res(e.target.result); rd.readAsDataURL(sigInput.files[0]); });
+                companySignature = r; localStorage.setItem('nikawan_sig', r);
+                await supabase.from('settings').upsert({ key: 'signature_base64', value: r });
+            }
+            updateLogoUI(companyLogo);
+            alert('Brand berhasil disimpan!');
+            closeModal('settingsModal');
+        }
+
+        function previewImage(input, id) {
+            if(input.files[0]) {
+                const r = new FileReader();
+                r.onload = e => { document.getElementById(id).src = e.target.result; document.getElementById(id).style.display = 'block'; };
+                r.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // ==========================================
+        // NAVIGATION & RENDERING
+        // ==========================================
+        function navigate(page) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`nav-${page}`)?.classList.add('active');
+            if(page === 'clients') renderClients();
+        }
+
+        async function renderClients() {
+            showLoading(true);
+            const { data, error } = await supabase.from('customers').select('*').eq('status', 'active').order('created_at', { ascending: false });
+            showLoading(false);
+            
+            if(error) return alert(error.message);
+
+            const container = document.getElementById('appContent');
+            container.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:25px;">
+                    <h3 style="color:var(--nikawan-blue);">Daftar Client</h3>
+                    <button class="btn btn-primary" onclick="openAddClientModal()"><i class="fas fa-plus"></i> Tambah Client</button>
+                </div>
+                <div class="client-grid">
+                    ${data.map(c => `
+                        <div class="client-card ${selectedClientId === c.id ? 'selected' : ''}" onclick="selectClient('${c.id}')">
+                            <div class="client-name">${c.name}</div>
+                            <div class="client-pic">PIC: ${c.pic || '-'}</div>
+                            <button class="btn btn-sm btn-danger" style="position:absolute; top:15px; right:15px;" onclick="event.stopPropagation(); deleteClient('${c.id}')"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `).join('')}
+                </div>
+                <div id="workflowArea" style="display:none;"></div>
+            `;
+        }
+
+        async function selectClient(clientId) {
+            selectedClientId = clientId;
+            showLoading(true);
+            
+            // Get Project
+            const { data: proj } = await supabase.from('projects').select('*').eq('customer_id', clientId).single();
+            currentProjectId = proj?.id;
+
+            // Get Docs
+            const { data: docs } = await supabase.from('documents').select('*').eq('project_id', proj?.id || '0000');
+
+            showLoading(false);
+            renderClientGrid(); // Update selection highlight
+
+            const area = document.getElementById('workflowArea');
+            area.style.display = 'block';
+
+            if(!proj) {
+                area.innerHTML = `<div style="text-align:center; padding:50px; background:white; border-radius:16px; border:1px solid var(--border);"><h3>Belum Ada Proyek</h3><button class="btn btn-primary" style="margin-top:15px;" onclick="startProject('${clientId}')">Mulai Proyek Baru</button></div>`;
+                return;
+            }
+
+            area.innerHTML = `
+                <div style="background:white; padding:30px; border-radius:16px; border:1px solid var(--border); margin-top:20px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                        <div>
+                            <h2 style="color:var(--nikawan-blue);">${proj.project_number}</h2>
+                            <p style="color:var(--text-muted);">Tahap: ${proj.current_stage} | Nilai: Rp ${proj.value.toLocaleString()}</p>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn btn-outline" onclick="document.getElementById('uploadModal').style.display='flex'"><i class="fas fa-upload"></i> Upload Dokumen</button>
+                            <button class="btn btn-outline" onclick="generateTemplate()"><i class="fas fa-print"></i> Cetak Surat</button>
+                            <button class="btn btn-primary" onclick="advanceStage('${proj.id}')"><i class="fas fa-arrow-right"></i> Lanjut Tahap</button>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin:20px 0 10px; color:var(--nikawan-blue);">Arsip Dokumen</h4>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:15px;">
+                        ${docs.map(d => `
+                            <div style="background:#F8FAFC; padding:15px; border-radius:12px; border:1px solid var(--border); cursor:pointer;" onclick="window.open('${d.drive_url || '#'}','_blank')">
+                                <i class="fas fa-file-pdf" style="font-size:24px; color:var(--nikawan-blue); margin-bottom:10px;"></i>
+                                <div style="font-weight:bold; font-size:13px;">${d.doc_type}</div>
+                                <div style="font-size:11px; color:var(--text-muted);">${d.doc_number}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            area.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function renderClientGrid() {
+            // Re-render only to update selected class
+            const cards = document.querySelectorAll('.client-card');
+            cards.forEach((card, idx) => {
+                // Logic to match card with selectedClientId would go here
+                // Simplified for brevity: just re-fetch list or toggle class manually
+            });
+        }
+
+        // ==========================================
+        // ACTIONS
+        // ==========================================
+        async function openAddClientModal() {
+            const name = prompt('Nama Perusahaan:');
+            if(name) {
+                showLoading(true);
+                await supabase.from('customers').insert({ name, pic: prompt('PIC:') || '', email: prompt('Email:') || '' });
+                showLoading(false);
+                renderClients();
+            }
+        }
+
+        async function deleteClient(id) {
+            if(confirm('Hapus client?')) {
+                await supabase.from('customers').update({ status: 'deleted' }).eq('id', id);
+                renderClients();
+            }
+        }
+
+        async function startProject(clientId) {
+            const num = prompt('Nomor Proyek:');
+            const val = prompt('Nilai Proyek (Rp):');
+            if(num && val) {
+                showLoading(true);
+                await supabase.from('projects').insert({ 
+                    customer_id: clientId, 
+                    project_number: num, 
+                    value: parseInt(val), 
+                    description: prompt('Deskripsi:') || '' 
+                });
+                showLoading(false);
+                selectClient(clientId);
+            }
+        }
+
+        async function advanceStage(projId) {
+            const stages = ['penawaran','po','pengerjaan','bast','invoice','bayar','selesai'];
+            const { data: proj } = await supabase.from('projects').select('current_stage').eq('id', projId).single();
+            const idx = stages.indexOf(proj.current_stage);
+            if(idx < stages.length - 1) {
+                await supabase.from('projects').update({ current_stage: stages[idx+1] }).eq('id', projId);
+                selectClient(selectedClientId);
+            }
+        }
+
+        // --- UPLOAD TO GOOGLE DRIVE VIA EDGE FUNCTION OR DIRECT API ---
+        // Note: Direct upload from browser to GDrive requires OAuth token.
+        // Best practice: Upload to Supabase Storage first, then trigger GDrive sync via Edge Function.
+        // For this demo, we simulate saving metadata to Supabase.
+        async function handleUploadFile() {
+            const file = document.getElementById('upFile').files[0];
+            const docType = document.getElementById('upDocType').value;
+            
+            if(!file || !currentProjectId) return alert('Pilih file dan pastikan proyek aktif');
+
+            showLoading(true);
+            
+            // 1. Upload to Supabase Storage (as temp holding)
+            const fileName = `${currentProjectId}/${Date.now()}_${file.name}`;
+            const { data: uploadData, error: uploadErr } = await supabase.storage.from('documents').upload(fileName, file);
+            
+            if(uploadErr) { showLoading(false); return alert('Gagal upload: ' + uploadErr.message); }
+
+            // 2. Get Public URL
+            const { data: urlData } = supabase.storage.from('documents').getPublicUrl(fileName);
+            
+            // 3. Generate Auto Number if empty
+            let docNum = document.getElementById('upDocNumber').value;
+            if(!docNum) {
+                const { data: seqData } = await supabase.rpc('get_next_doc_number', { prefix: docType.substring(0,3).toUpperCase() });
+                docNum = seqData;
+            }
+
+            // 4. Save Metadata to DB
+            await supabase.from('documents').insert({
+                project_id: currentProjectId,
+                doc_type: docType,
+                doc_number: docNum,
+                drive_file_id: fileName, // Using Supabase path as reference for now
+                drive_url: urlData.publicUrl
+            });
+
+            showLoading(false);
+            alert('Dokumen berhasil diupload!');
+            closeModal('uploadModal');
+            selectClient(selectedClientId);
+        }
+
+        // --- USER MANAGEMENT ---
+        async function openUserModal() {
+            if(currentUser.role !== 'super_admin') return alert('Akses ditolak');
+            document.getElementById('userModal').style.display = 'flex';
+        }
+
+        async function addNewUser() {
+            const u = document.getElementById('newUsername').value;
+            const p = document.getElementById('newPassword').value;
+            const n = document.getElementById('newFullName').value;
+            const r = document.getElementById('newRole').value;
+
+            if(!u || !p || !n) return alert('Lengkapi semua data');
+
+            showLoading(true);
+            // Hash password before inserting (Use RPC in production)
+            // For demo, we insert plain and rely on RPC verify later, or hash client-side if library available
+            // Ideally: Call RPC 'register_user(u,p,n,r)' which handles crypt()
+            
+            // Simulating secure insert via RPC
+            const { error } = await supabase.rpc('register_user', { p_username: u, p_password: p, p_fullname: n, p_role: r });
+            
+            showLoading(false);
+            if(error) alert('Gagal: ' + error.message);
+            else { alert('User berhasil ditambahkan'); closeModal('userModal'); }
+        }
+
+        // --- TEMPLATE GENERATOR ---
+        async function generateTemplate() {
+            if(!currentProjectId) return;
+            const { data: proj } = await supabase.from('projects').select('*, customers(*)').eq('id', currentProjectId).single();
+            const today = new Date().toLocaleDateString('id-ID', { year:'numeric', month:'long', day:'numeric' });
+            
+            const logoTag = companyLogo ? `<img src="${companyLogo}">` : '';
+            const sigTag = companySignature ? `<img src="${companySignature}" style="max-height:60px;">` : '<div style="height:60px;"></div>';
+
+            document.getElementById('printArea').innerHTML = `
+                <div class="letter-head">
+                    ${logoTag}
+                    <h1>PT NIKAWAN SOLUSINDO SEJAHTERA</h1>
+                    <p>Ruko Sindangsari, Kp. Leles RT 04 RW 07 Kel. Sindangsari, Kec. Pasarkemis Kab. Tangerang 15562</p>
+                </div>
+                <div class="letter-body">
+                    <p>Kepada Yth.<br><b>${proj.customers.name}</b><br>Up. ${proj.customers.pic}<br>di Tempat</p>
+                    <p style="margin:20px 0;">Dengan hormat,<br>Bersama ini kami sampaikan penawaran untuk pekerjaan:</p>
+                    <table class="letter-table">
+                        <tr><th>No. Penawaran</th><td>${proj.project_number}</td></tr>
+                        <tr><th>Tanggal</th><td>${today}</td></tr>
+                        <tr><th>Uraian</th><td>${proj.description}</td></tr>
+                        <tr><th>Nilai</th><td style="font-weight:bold; font-size:14pt;">Rp ${proj.value.toLocaleString('id-ID')}</td></tr>
+                    </table>
+                    <p style="margin-top:30px;">Demikian penawaran ini kami sampaikan. Terima kasih.</p>
+                </div>
+                <div class="letter-footer">
+                    <p style="margin-bottom:60px;">Tangerang, ${today}</p>
+                    <div class="signature-space">${sigTag}</div>
+                    <p style="font-weight:bold;">PT NIKAWAN SOLUSINDO SEJAHTERA</p>
+                    <p>Direktur Utama</p>
+                </div>
+            `;
+            setTimeout(() => window.print(), 200);
+        }
+
+        // ==========================================
+        // UTILS
+        // ==========================================
+        function showLoading(show) { document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
+
+        // INIT
+        document.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('nikawan_user');
+            if(saved) {
+                currentUser = JSON.parse(saved);
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('userDisplay').innerText = currentUser.full_name;
+                applyBranding();
+                navigate('clients');
+            }
+        });
+
+        document.getElementById('loginPass').addEventListener('keypress', e => { if(e.key==='Enter') handleLogin(); });
+    </script>
+</body>
+</html>
