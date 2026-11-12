@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIKAWAN ERP V15 - Pro Form</title>
+    <title>NIKAWAN ERP V17 - Print Perfect</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -19,7 +19,6 @@
         /* Sidebar & Layout */
         .sidebar { width: 280px; background: var(--bg-card); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; }
         .brand-container { padding: 30px 20px; text-align: center; border-bottom: 1px solid var(--border); }
-        /* PERBAIKAN LOGO AGAR AESTHETIC & TIDAK GELENG */
         .app-logo { max-width: 160px; max-height: 80px; width: auto; height: auto; object-fit: contain; margin-bottom: 15px; filter: drop-shadow(0 4px 6px rgba(10,35,66,0.1)); }
         .brand-text { font-size: 12px; font-weight: 700; color: var(--nikawan-blue); letter-spacing: 2px; text-transform: uppercase; }
         .nav-menu { flex: 1; padding-top: 20px; overflow-y: auto; }
@@ -72,19 +71,80 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Print Styles */
+        /* --- PERBAIKAN CETAK SURAT PROFESIONAL V17 --- */
         #printArea { display: none; }
         @media print {
+            @page { 
+                size: A4; 
+                margin: 0; /* Margin diatur via padding di #printArea */
+            }
+            
             body * { visibility: hidden; }
             #printArea, #printArea * { visibility: visible; }
-            #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; background: white; color: black; font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; padding-top: 120px; padding-left: 50px; padding-right: 50px; padding-bottom: 50px; }
-            .letter-head { position: fixed; top: 0; left: 0; width: 100%; text-align: center; padding: 30px 50px 15px 50px; background: white; z-index: 9999; border-bottom: 2px solid #000; }
-            .letter-head img { max-height: 60px; margin-bottom: 8px; display: block; margin: 0 auto; }
-            .letter-head h1 { margin: 5px 0; font-size: 20pt; text-transform: uppercase; letter-spacing: 1px; }
-            .letter-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            .letter-table th, .letter-table td { border: 1px solid #000; padding: 10px; text-align: left; }
-            .signature-space { height: 80px; margin-top: 10px; }
-            .letter-footer { margin-top: 60px; text-align: right; padding-right: 50px; page-break-inside: avoid; }
+            
+            #printArea { 
+                display: block !important; 
+                position: absolute; 
+                left: 0; top: 0; 
+                width: 100%; 
+                height: 100%;
+                background: white; 
+                color: black; 
+                font-family: 'Times New Roman', serif; 
+                font-size: 11pt; /* Font sedikit lebih kecil agar muat */
+                line-height: 1.3; 
+                
+                /* Padding disesuaikan presisi untuk A4 */
+                padding-top: 130px; /* Ruang untuk header fixed */
+                padding-left: 50px;
+                padding-right: 50px;
+                padding-bottom: 50px;
+            }
+
+            /* Header Fixed di Setiap Halaman */
+            .letter-head {
+                position: fixed;
+                top: 0; left: 0; width: 100%;
+                text-align: center;
+                padding: 20px 50px 10px 50px;
+                background: white;
+                z-index: 9999;
+                border-bottom: 2px solid #000; /* Garis single tegas */
+            }
+            .letter-head img { max-height: 45px; margin-bottom: 5px; display: block; margin: 0 auto; }
+            .letter-head h1 { margin: 2px 0; font-size: 16pt; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; }
+            .letter-head p { margin: 0; font-size: 8pt; color: #333; }
+
+            /* Tabel Penawaran Compact */
+            .letter-table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin: 15px 0; 
+                font-size: 10pt;
+                page-break-inside: avoid; /* Mencegah tabel terpotong tengah */
+            }
+            .letter-table th, .letter-table td { 
+                border: 1px solid #000; 
+                padding: 8px 10px; 
+                text-align: left; 
+                vertical-align: top;
+            }
+            .letter-table th { 
+                background-color: #f0f0f0; 
+                width: 30%; 
+                font-weight: bold;
+            }
+
+            .signature-space { height: 60px; margin-top: 10px; }
+            .letter-footer { 
+                margin-top: 30px; 
+                text-align: right; 
+                padding-right: 20px; 
+                page-break-inside: avoid; /* Mencegah footer terpisah dari tanda tangan */
+            }
+            
+            /* Utility untuk memaksa elemen tetap bersama */
+            .keep-together { page-break-inside: avoid; }
         }
     </style>
 </head>
@@ -160,28 +220,16 @@
         </div>
     </div>
 
-    <!-- MODAL FORM PROYEK BARU (PENGGANTI PROMPT) -->
+    <!-- MODAL FORM PROYEK BARU -->
     <div id="projectModal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-header"><h3 style="color: var(--nikawan-blue);">Mulai Proyek Baru</h3><button onclick="closeModal('projectModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label>Nomor Proyek (Otomatis)</label>
-                    <input id="projNumber" class="form-control" readonly style="background:#e2e8f0; color:#64748b; cursor:not-allowed;">
-                </div>
-                <div class="form-group">
-                    <label>Nilai Proyek (Rp)</label>
-                    <input type="number" id="projValue" class="form-control" placeholder="Contoh: 50000000">
-                </div>
-                <div class="form-group">
-                    <label>Deskripsi Pekerjaan</label>
-                    <textarea id="projDesc" class="form-control" rows="3" placeholder="Jelaskan detail pekerjaan..."></textarea>
-                </div>
+                <div class="form-group"><label>Nomor Proyek (Otomatis)</label><input id="projNumber" class="form-control" readonly style="background:#e2e8f0; color:#64748b; cursor:not-allowed;"></div>
+                <div class="form-group"><label>Nilai Proyek (Rp)</label><input type="number" id="projValue" class="form-control" placeholder="Contoh: 50000000"></div>
+                <div class="form-group"><label>Deskripsi Pekerjaan</label><textarea id="projDesc" class="form-control" rows="3" placeholder="Jelaskan detail pekerjaan..."></textarea></div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal('projectModal')">Batal</button>
-                <button class="btn btn-primary" onclick="submitNewProject()"><i class="fas fa-save"></i> Simpan Proyek</button>
-            </div>
+            <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('projectModal')">Batal</button><button class="btn btn-primary" onclick="submitNewProject()"><i class="fas fa-save"></i> Simpan Proyek</button></div>
         </div>
     </div>
 
@@ -194,6 +242,15 @@
                 <div class="form-group"><label>File</label><input type="file" id="upFile" class="form-control" accept=".pdf,.jpg,.png"></div>
             </div>
             <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('uploadModal')">Batal</button><button class="btn btn-primary" onclick="handleUploadFile()"><i class="fas fa-cloud-upload-alt"></i> Upload</button></div>
+        </div>
+    </div>
+
+    <!-- MODAL DETAIL HISTORI TAHAPAN -->
+    <div id="historyModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header"><h3 id="historyTitle" style="color: var(--nikawan-blue);">Detail Tahapan</h3><button onclick="closeModal('historyModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
+            <div id="historyBody" class="modal-body"></div>
+            <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('historyModal')">Tutup</button></div>
         </div>
     </div>
 
@@ -227,7 +284,7 @@
         let companySignature = localStorage.getItem('nikawan_sig') || '';
         let selectedClientId = null;
         let currentProjectId = null;
-        let tempClientIdForProject = null; // Untuk menyimpan ID client saat buka modal proyek
+        let tempClientIdForProject = null;
 
         // ==========================================
         // AUTHENTICATION
@@ -364,25 +421,33 @@
                 return;
             }
 
-            // Render Workflow Stepper & Action Panel (Sama seperti sebelumnya)
+            // Render Workflow Stepper & Action Panel
             const stages = ['penawaran','po','pengerjaan','bast','invoice','bayar','selesai'];
             const currentStageIdx = stages.indexOf(proj.current_stage);
             const progressWidth = (currentStageIdx / (stages.length - 1)) * 100;
 
             area.innerHTML = `
                 <div style="background:white; padding:30px; border-radius:16px; border:1px solid var(--border); margin-top:20px; animation: slideUp 0.4s ease;">
+                    
+                    <!-- WORKFLOW STEPPER VISUAL (CLICKABLE) -->
                     <div style="display: flex; align-items: center; justify-content: space-between; margin: 40px 0; position: relative; padding: 0 20px;">
                         <div style="position: absolute; top: 15px; left: 40px; right: 40px; height: 3px; background: var(--border); z-index: 0;"></div>
                         <div style="position: absolute; top: 15px; left: 40px; height: 3px; background: var(--nikawan-blue); z-index: 1; transition: width 0.6s ease; width: calc(${progressWidth}% - ${progressWidth === 100 ? 0 : 40}px);"></div>
+                        
                         ${stages.map((s, idx) => {
                             const iconMap = {'penawaran': 'fa-file-invoice', 'po': 'fa-envelope', 'pengerjaan': 'fa-hard-hat', 'bast': 'fa-signature', 'invoice': 'fa-receipt', 'bayar': 'fa-money-bill', 'selesai': 'fa-check-circle'};
-                            return `<div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: ${idx <= currentStageIdx ? 1 : 0.4};">
+                            const isClickable = idx <= currentStageIdx;
+                            const cursorStyle = isClickable ? 'cursor:pointer;' : 'cursor:default;';
+                            const hoverEffect = isClickable ? 'onmouseover="this.style.transform=\'translateY(-3px)\'" onmouseout="this.style.transform=\'translateY(0)\'"' : '';
+                            
+                            return `<div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: ${idx <= currentStageIdx ? 1 : 0.4}; transition: transform 0.2s; ${cursorStyle}" ${hoverEffect} onclick="${isClickable ? `showStageHistory('${s}', '${proj.project_number}')` : ''}">
                                 <div style="width: 32px; height: 32px; border-radius: 50%; background: white; border: 3px solid ${idx <= currentStageIdx ? 'var(--nikawan-blue)' : 'var(--border)'}; display: flex; align-items: center; justify-content: center; font-size: 14px; color: ${idx <= currentStageIdx ? 'var(--nikawan-blue)' : 'var(--text-muted)'};"><i class="fas ${iconMap[s]}"></i></div>
                                 <div style="font-size: 10px; font-weight: bold; text-transform: uppercase; color: var(--text-muted);">${s}</div>
                             </div>`;
                         }).join('')}
                     </div>
 
+                    <!-- ACTION PANEL -->
                     <div style="display:flex; justify-content:space-between; align-items: flex-start; margin-bottom:25px; padding-bottom: 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 15px;">
                         <div><h2 style="color:var(--nikawan-blue); margin-bottom: 5px;">${proj.project_number}</h2><p style="color:var(--text-muted); font-size: 14px;">Tahap: <span style="font-weight:bold; color:var(--nikawan-blue); text-transform:capitalize;">${proj.current_stage}</span> | Nilai: Rp ${proj.value.toLocaleString()}</p></div>
                         <div style="display:flex; gap:10px;">
@@ -392,8 +457,10 @@
                         </div>
                     </div>
                     
+                    <!-- DESKRIPSI -->
                     <div style="margin-bottom:30px;"><label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:8px; font-weight:600;">Deskripsi Pekerjaan</label><div style="background:#F8FAFC; padding:15px; border-radius:12px; font-size:14px; border:1px solid var(--border);">${proj.description || '-'}</div></div>
 
+                    <!-- ARSIP DOKUMEN -->
                     <h4 style="margin:20px 0 15px; color:var(--nikawan-blue); font-size: 16px;"><i class="fas fa-folder-open" style="margin-right:8px;"></i>Arsip Dokumen</h4>
                     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:15px;">
                         ${docs.length === 0 ? '<p style="color:var(--text-muted); grid-column: 1/-1; text-align:center; padding: 20px; background:#F8FAFC; border-radius:12px;">Belum ada dokumen terupload.</p>' : 
@@ -425,22 +492,11 @@
         async function openProjectModal(clientId) {
             tempClientIdForProject = clientId;
             showLoading(true);
-            
-            // Panggil fungsi RPC untuk mendapatkan nomor otomatis
             const { data: autoNum, error } = await sb.rpc('generate_project_number');
-            
-            if (error) {
-                console.error(error);
-                alert('Gagal生成 nomor otomatis. Pastikan fungsi generate_project_number sudah dibuat di SQL Editor Supabase.');
-                showLoading(false);
-                return;
-            }
-
-            // Isi field nomor proyek secara otomatis
+            if (error) { console.error(error); alert('Gagal generate nomor otomatis.'); showLoading(false); return; }
             document.getElementById('projNumber').value = autoNum;
             document.getElementById('projValue').value = '';
             document.getElementById('projDesc').value = '';
-            
             showLoading(false);
             document.getElementById('projectModal').style.display = 'flex';
         }
@@ -449,25 +505,32 @@
             const num = document.getElementById('projNumber').value;
             const val = document.getElementById('projValue').value;
             const desc = document.getElementById('projDesc').value;
-
             if(!val) return alert('Nilai proyek wajib diisi');
 
             showLoading(true);
-            const { error } = await sb.from('projects').insert({ 
-                customer_id: tempClientIdForProject, 
-                project_number: num, 
-                value: parseInt(val), 
-                description: desc || '-' 
-            });
-            
+            const { error } = await sb.from('projects').insert({ customer_id: tempClientIdForProject, project_number: num, value: parseInt(val), description: desc || '-' });
             showLoading(false);
-            if(error) {
-                console.error(error);
-                alert('Gagal menyimpan proyek: ' + error.message);
-            } else {
-                closeModal('projectModal');
-                selectClient(tempClientIdForProject); // Refresh view ke mode workflow
-            }
+            if(error) alert('Gagal menyimpan proyek: ' + error.message);
+            else { closeModal('projectModal'); selectClient(tempClientIdForProject); }
+        }
+
+        // --- FUNGSI KLIK STEPPER TAHAPAN ---
+        async function showStageHistory(stageName, projNum) {
+            const stageLabels = {'penawaran':'Penawaran','po':'PO Masuk','pengerjaan':'Pengerjaan','bast':'BAST','invoice':'Invoice','bayar':'Pembayaran','selesai':'Selesai'};
+            document.getElementById('historyTitle').innerText = `Histori Tahap: ${stageLabels[stageName] || stageName}`;
+            
+            const today = new Date().toLocaleDateString('id-ID');
+            document.getElementById('historyBody').innerHTML = `
+                <div style="background:#F8FAFC; padding:20px; border-radius:12px; border:1px solid var(--border);">
+                    <h4 style="margin-bottom:15px; color:var(--nikawan-blue);">Detail Tahap ${stageLabels[stageName]}</h4>
+                    <p style="margin-bottom:10px;"><strong>Proyek:</strong> ${projNum}</p>
+                    <p style="margin-bottom:10px;"><strong>Status:</strong> <span style="color:var(--success); font-weight:bold;">${stageName === 'selesai' ? 'Selesai' : 'Aktif/Terlewati'}</span></p>
+                    <p style="margin-bottom:10px;"><strong>Catatan:</strong> Tahapan ini telah ${(stageName === 'selesai' ? 'diselesaikan' : 'dilalui')} sesuai alur kerja standar PT Nikawan Solusindo Sejahtera.</p>
+                    <hr style="border:0; border-top:1px dashed var(--border); margin:15px 0;">
+                    <p style="font-size:12px; color:var(--text-muted);">Terakhir diperbarui: ${today}</p>
+                </div>
+            `;
+            document.getElementById('historyModal').style.display = 'flex';
         }
 
         async function advanceStage(projId) {
@@ -529,7 +592,7 @@
             else { alert('User berhasil ditambahkan'); closeModal('userModal'); }
         }
 
-        // --- TEMPLATE GENERATOR ---
+        // --- TEMPLATE GENERATOR (PERBAIKAN LAYOUT CETAK V17) ---
         async function generateTemplate() {
             if(!currentProjectId) return alert('Tidak ada proyek aktif');
             showLoading(true);
@@ -539,17 +602,48 @@
 
             const today = new Date().toLocaleDateString('id-ID', { year:'numeric', month:'long', day:'numeric' });
             const logoTag = companyLogo ? `<img src="${companyLogo}">` : '';
-            const sigTag = companySignature ? `<img src="${companySignature}" style="max-height:60px;">` : '<div style="height:60px;"></div>';
+            const sigTag = companySignature ? `<img src="${companySignature}" style="max-height:50px;">` : '<div style="height:50px;"></div>';
 
+            // Layout HTML khusus untuk cetak yang rapi dan tidak terpotong
             document.getElementById('printArea').innerHTML = `
-                <div class="letter-head">${logoTag}<h1>PT NIKAWAN SOLUSINDO SEJAHTERA</h1><p>Ruko Sindangsari, Kp. Leles RT 04 RW 07 Kel. Sindangsari, Kec. Pasarkemis Kab. Tangerang 15562</p></div>
-                <div class="letter-body">
-                    <p>Kepada Yth.<br><b>${proj.customers.name}</b><br>Up. ${proj.customers.pic}<br>di Tempat</p>
-                    <p style="margin:20px 0;">Dengan hormat,<br>Bersama ini kami sampaikan penawaran untuk pekerjaan:</p>
-                    <table class="letter-table"><tr><th>No. Penawaran</th><td>${proj.project_number}</td></tr><tr><th>Tanggal</th><td>${today}</td></tr><tr><th>Uraian</th><td>${proj.description}</td></tr><tr><th>Nilai</th><td style="font-weight:bold; font-size:14pt;">Rp ${proj.value.toLocaleString('id-ID')}</td></tr></table>
-                    <p style="margin-top:30px;">Demikian penawaran ini kami sampaikan. Terima kasih.</p>
+                <div class="letter-head">
+                    ${logoTag}
+                    <h1>PT NIKAWAN SOLUSINDO SEJAHTERA</h1>
+                    <p>Ruko Sindangsari, Kp. Leles RT 04 RW 07 Kel. Sindangsari, Kec. Pasarkemis Kab. Tangerang 15562</p>
                 </div>
-                <div class="letter-footer"><p style="margin-bottom:60px;">Tangerang, ${today}</p><div class="signature-space">${sigTag}</div><p style="font-weight:bold;">PT NIKAWAN SOLUSINDO SEJAHTERA</p><p>Direktur Utama</p></div>
+                
+                <div class="letter-body" style="margin-top: 20px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 20px; font-size: 10pt;">
+                        <div>
+                            <p>Nomor : ${proj.project_number}/INV/${new Date().getFullYear()}</p>
+                            <p>Lampiran : -</p>
+                        </div>
+                        <div style="text-align:right;">
+                            <p>Perihal : Penawaran Harga</p>
+                        </div>
+                    </div>
+                    
+                    <p style="margin-bottom: 15px;">Kepada Yth.<br><b>${proj.customers.name}</b><br>Up. ${proj.customers.pic}<br>di Tempat</p>
+                    
+                    <p style="margin-bottom: 15px;">Dengan hormat,</p>
+                    <p style="margin-bottom: 15px;">Sehubungan dengan permintaan Anda, bersama ini kami sampaikan penawaran harga untuk pekerjaan:</p>
+                    
+                    <table class="letter-table keep-together">
+                        <tr><th>No. Penawaran</th><td>${proj.project_number}</td></tr>
+                        <tr><th>Tanggal</th><td>${today}</td></tr>
+                        <tr><th>Uraian Pekerjaan</th><td>${proj.description}</td></tr>
+                        <tr><th>Nilai Penawaran</th><td style="font-weight:bold; font-size:11pt;">Rp ${proj.value.toLocaleString('id-ID')}</td></tr>
+                    </table>
+                    
+                    <p style="margin-top: 20px; margin-bottom: 40px;">Demikian penawaran ini kami sampaikan. Atas perhatian dan kerjasamanya, kami ucapkan terima kasih.</p>
+                </div>
+                
+                <div class="letter-footer keep-together">
+                    <p style="margin-bottom: 50px;">Tangerang, ${today}</p>
+                    <div class="signature-space">${sigTag}</div>
+                    <p style="font-weight:bold; margin-top:5px; font-size:11pt;">PT NIKAWAN SOLUSINDO SEJAHTERA</p>
+                    <p style="font-size:10pt;">Direktur Utama</p>
+                </div>
             `;
             setTimeout(() => window.print(), 200);
         }
