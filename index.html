@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIKAWAN ERP V22 - Filter & Color Indicators</title>
+    <title>NIKAWAN ERP V23 - Exact Quotation Format</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -58,9 +58,9 @@
         .client-card.selected { background: #F0F5FF; box-shadow: 0 0 0 2px rgba(10,35,66,0.1); }
         
         /* INDIKATOR WARNA PROSES TANPA KLIK */
-        .client-card.status-active { border-left: 5px solid var(--nikawan-blue); } /* Sedang Berjalan */
-        .client-card.status-completed { border-left: 5px solid var(--success); } /* Selesai */
-        .client-card.status-pending { border-left: 5px solid var(--warning); } /* Baru / Belum Mulai */
+        .client-card.status-active { border-left: 5px solid var(--nikawan-blue); }
+        .client-card.status-completed { border-left: 5px solid var(--success); }
+        .client-card.status-pending { border-left: 5px solid var(--warning); }
 
         .client-name { font-size: 18px; font-weight: 700; margin-bottom: 6px; color: var(--nikawan-blue); }
         .client-pic { font-size: 13px; color: var(--text-muted); margin-bottom: 15px; }
@@ -101,17 +101,18 @@
             
             #printArea { 
                 display: block !important; position: absolute; left: 0; top: 0; width: 100%; height: 100%;
-                background: white; color: black; font-family: 'Arial', sans-serif; font-size: 10pt; line-height: 1.3;
-                padding: 40px 50px;
+                background: white; color: black; font-family: 'Arial', sans-serif; font-size: 9pt; line-height: 1.2;
+                padding: 30px 40px;
             }
 
-            .doc-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-            .doc-header img { max-height: 50px; margin-bottom: 5px; }
+            .doc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+            .doc-header-left { flex: 1; }
+            .doc-header img { max-height: 60px; margin-bottom: 5px; }
             .doc-header h1 { margin: 2px 0; font-size: 14pt; text-transform: uppercase; font-weight: bold; }
             .doc-header p { margin: 0; font-size: 8pt; color: #333; }
 
-            .doc-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 9pt; }
-            .doc-table th, .doc-table td { border: 1px solid #000; padding: 6px 8px; text-align: left; vertical-align: middle; }
+            .doc-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 8pt; }
+            .doc-table th, .doc-table td { border: 1px solid #000; padding: 4px 6px; text-align: left; vertical-align: middle; }
             .doc-table th { background-color: #f0f0f0; font-weight: bold; text-align: center; }
             .doc-table td.num { text-align: right; }
             .doc-table td.center { text-align: center; }
@@ -125,6 +126,7 @@
             .text-right { text-align: right; }
             .text-center { text-align: center; }
             .bold { font-weight: bold; }
+            .uppercase { text-transform: uppercase; }
         }
     </style>
 </head>
@@ -401,7 +403,6 @@
 
         async function renderClients() {
             showLoading(true);
-            // Ambil semua data client aktif
             const { data, error } = await sb.from('customers').select('*').eq('status', 'active').order('created_at', { ascending: false });
             showLoading(false);
             if(error) return alert(error.message);
@@ -440,10 +441,6 @@
         function renderClientGrid(clients) {
             const container = document.getElementById('appContent');
             
-            // Tentukan kelas warna berdasarkan stage terakhir (simulasi sederhana)
-            // Di aplikasi nyata, ini harus join dengan tabel projects
-            // Untuk sekarang kita beri kelas default, nanti di selectClient akan update
-            
             container.innerHTML = `
                 <div class="client-controls">
                     <div class="search-box">
@@ -464,7 +461,6 @@
                 <div class="client-grid" id="clientGridContainer">
                     ${clients.length === 0 ? '<p style="grid-column:1/-1; text-align:center; color:var(--text-muted);">Tidak ada client ditemukan.</p>' : 
                     clients.map(c => {
-                        // Logic warna sementara (bisa diupdate saat load project)
                         let statusClass = 'status-pending'; 
                         let badgeClass = 'badge-pending';
                         let badgeText = 'Baru';
@@ -717,7 +713,7 @@
             if(error) alert('Gagal: ' + error.message); else { alert('User berhasil ditambahkan'); closeModal('userModal'); }
         }
 
-        // --- TEMPLATE GENERATOR (FIXED FOR ALL STAGES) ---
+        // --- TEMPLATE GENERATOR (EXACT MATCH DENGAN CONTOH DOKUMEN) ---
         async function generateTemplate() {
             if(!currentProjectId) return alert('Tidak ada proyek aktif');
             showLoading(true);
@@ -734,59 +730,116 @@
 
             let docContent = '';
 
-            // Template untuk tahap awal (Sales & Quotation)
+            // FORMAT QUOTATION EXACT MATCH (NSS-Q-X-26-006)
             if (['permintaan_sales', 'pembuatan_penawaran', 'kirim_email'].includes(stage.id)) {
                 docContent = `
                     <div class="doc-header keep-together">
+                        <div class="doc-header-left">
+                            <h1>PT. NIKAWAN SOLUSINDO SEJAHTERA</h1>
+                            <p>Ruko Sindangsari Kp. Leles, Sindangsari, Kec. Ps. Kemis, Kabupaten Tangerang, Banten 15560<br>
+                            (+62) 82249804379, (+62) 81293101282, email: nikawan.ss@gmail.com, marketing@nikawan-solusindo.com, finance@nikawan-solusindo.com</p>
+                        </div>
                         ${logoTag}
-                        <h1>PT. NIKAWAN SOLUSINDO SEJAHTERA</h1>
-                        <p>Ruko Sindangsari Kp. Leles, Sindangsari, Kec. Ps. Kemis, Kabupaten Tangerang, Banten 15560<br>
-                        (+62) 82249804379, (+62) 81293101282, email: nikawan.ss@gmail.com, marketing@nikawan-solusindo.com, finance@nikawan-solusindo.com</p>
                     </div>
-                    <div style="text-align:center; margin: 20px 0;"><h2 style="font-size:14pt; font-weight:bold;">QUOTATION (Penawaran)</h2></div>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin: 20px 0; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
+                        <div>
+                            <h2 style="font-size:14pt; font-weight:bold; margin:0;">QUOTATION (Penawaran)</h2>
+                            <p style="margin:5px 0 0 0; font-size:9pt;">Quotation No: <strong>${proj.project_number}</strong></p>
+                        </div>
+                        <div style="text-align:right; font-size:9pt;">
+                            <p><strong>Quote Date:</strong> ${today}</p>
+                            <p><strong>Valid For:</strong> 14 days</p>
+                        </div>
+                    </div>
+
                     <table style="width:100%; margin-bottom:20px; font-size:9pt; border:none;">
-                        <tr><td style="border:none; width:50%;"><strong>Quotation No:</strong> ${proj.project_number}</td><td style="border:none; text-align:right;"><strong>Quote Date:</strong> ${today}</td></tr>
-                        <tr><td style="border:none;"><strong>Valid For:</strong> 14 days</td><td style="border:none;"></td></tr>
+                        <tr><td style="border:none; width:15%;"><strong>Kepada Yth,</strong></td><td style="border:none;"><strong>Bapak Alvino</strong></td></tr>
+                        <tr><td style="border:none;"><strong>Nama pelanggan</strong></td><td style="border:none;">: ${proj.customers.name}</td></tr>
+                        <tr><td style="border:none;"><strong>Alamat pelanggan</strong></td><td style="border:none;">: ${proj.customers.address || 'Alamat Client'}</td></tr>
+                        <tr><td style="border:none;"><strong>Phone, email</strong></td><td style="border:none;">: ${proj.customers.email || '-'}</td></tr>
                     </table>
-                    <p style="margin-bottom:15px;"><strong>Kepada Yth,</strong><br>Bapak/Ibu ${proj.customers.pic}<br>${proj.customers.name}<br>${proj.customers.address || 'Alamat Client'}</p>
-                    <p style="margin-bottom:15px;">Dengan hormat,<br>Sesuai dengan permintaan penawaran ${proj.description}, terlampir penawaran harga sebagai berikut:</p>
+
+                    <p style="margin-bottom:15px;">Dengan hormat,<br>Sesuai dengan permintaan penawaran maintenance di ${proj.customers.name}.<br>Terlampir penawaran harga sebagai berikut:</p>
+
                     <table class="doc-table keep-together">
-                        <thead><tr><th style="width:5%;">No.</th><th style="width:40%;">DESKRIPSI</th><th style="width:8%;">QTY</th><th style="width:10%;">SATUAN</th><th style="width:12%;">MATERIAL (Rp)</th><th style="width:12%;">JASA (Rp)</th><th style="width:13%;">TOTAL (Rp)</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th rowspan="2" style="width:5%;">No.</th>
+                                <th rowspan="2" style="width:30%;">DESKRIPSI</th>
+                                <th rowspan="2" style="width:6%;">QTY</th>
+                                <th rowspan="2" style="width:8%;">SATUAN</th>
+                                <th colspan="2">MATERIAL</th>
+                                <th colspan="2">JASA</th>
+                                <th rowspan="2" style="width:10%;">TOTAL</th>
+                            </tr>
+                            <tr>
+                                <th>HARGA SATUAN</th>
+                                <th>TOTAL</th>
+                                <th>HARGA SATUAN</th>
+                                <th>TOTAL</th>
+                            </tr>
+                        </thead>
                         <tbody>
-                            <tr><td class="center">1</td><td>${proj.description}</td><td class="center">1</td><td class="center">Lot</td><td class="num">-</td><td class="num">${proj.value.toLocaleString('id-ID')}</td><td class="num">${proj.value.toLocaleString('id-ID')}</td></tr>
-                            <tr><td colspan="6" class="text-right bold">Total Material</td><td class="num">-</td></tr>
-                            <tr><td colspan="6" class="text-right bold">Total Jasa</td><td class="num">${proj.value.toLocaleString('id-ID')}</td></tr>
-                            <tr><td colspan="6" class="text-right bold">PPN 11%</td><td class="num">${(proj.value * 0.11).toLocaleString('id-ID')}</td></tr>
-                            <tr><td colspan="6" class="text-right bold">QUOTE TOTAL</td><td class="num bold">${(proj.value * 1.11).toLocaleString('id-ID')}</td></tr>
+                            <!-- Baris item statis sesuai contoh, bisa dikembangkan jadi dinamis nanti -->
+                            <tr><td class="center">1</td><td>MAINTENANCE TRAFO TR1 1000KVA Meliputi:<br>* Test Transformer Turn Ratio<br>* Test Insulation Resistance<br>* Tightening Nut/Bolt trafo<br>* Cleaning trafo<br>* Function protection check</td><td class="center">1</td><td class="center">Unit</td><td class="num">-</td><td class="num">-</td><td class="num">5.000.000</td><td class="num">5.000.000</td><td class="num">5.000.000</td></tr>
+                            <tr><td class="center">2</td><td>Penggantian seal HV PIB</td><td class="center">1</td><td class="center">Set</td><td class="num">1.500.000</td><td class="num">1.500.000</td><td class="num">1.500.000</td><td class="num">1.500.000</td><td class="num">3.000.000</td></tr>
+                            <tr><td class="center">3</td><td>Penggantian seal LV 1/2000A</td><td class="center">1</td><td class="center">Set</td><td class="num">2.000.000</td><td class="num">2.000.000</td><td class="num">1.500.000</td><td class="num">1.500.000</td><td class="num">3.500.000</td></tr>
+                            <tr><td class="center">4</td><td>Maintenance Panel LV</td><td class="center">1</td><td class="center">Cell</td><td class="num">-</td><td class="num">-</td><td class="num">2.500.000</td><td class="num">2.500.000</td><td class="num">2.500.000</td></tr>
+                            <tr><td class="center">5</td><td>Maintenance Panel MV<br>Insulation resistance, cek kekencangan mur dan baut, cleaning</td><td class="center">2</td><td class="center">Cell</td><td class="num">-</td><td class="num">-</td><td class="num">2.500.000</td><td class="num">5.000.000</td><td class="num">5.000.000</td></tr>
+                            <tr><td class="center">6</td><td>Cleaning gardu</td><td class="center">1</td><td class="center">Lot</td><td class="num">-</td><td class="num">-</td><td class="num">1.000.000</td><td class="num">1.000.000</td><td class="num">1.000.000</td></tr>
+                            <tr><td class="center">7</td><td>Purification Oil Trafo 1 x 1000 kVA+ BDV Oil</td><td class="center">1</td><td class="center">Unit</td><td class="num">-</td><td class="num">-</td><td class="num">5.500.000</td><td class="num">5.500.000</td><td class="num">5.500.000</td></tr>
+                            <tr><td class="center">8</td><td>Material Oil Trafo</td><td class="center">20</td><td class="center">Liter</td><td class="num">65.000</td><td class="num">1.300.000</td><td class="num">-</td><td class="num">-</td><td class="num">1.300.000</td></tr>
+                            <tr><td class="center">9</td><td>DGA Oil Test, before& after purification</td><td class="center">2</td><td class="center">Sample</td><td class="num">-</td><td class="num">-</td><td class="num">3.000.000</td><td class="num">6.000.000</td><td class="num">6.000.000</td></tr>
+                            <tr><td class="center">10</td><td>Transportasi dan Akomodasi</td><td class="center">1</td><td class="center">Lot</td><td class="num">-</td><td class="num">-</td><td class="num">2.000.000</td><td class="num">2.000.000</td><td class="num">2.000.000</td></tr>
+                            <tr><td class="center">11</td><td>Koordinasi pengurusan PLN</td><td class="center">1</td><td class="center">Lot</td><td class="num">-</td><td class="num">-</td><td class="num">2.000.000</td><td class="num">2.000.000</td><td class="num">2.000.000</td></tr>
+                            
+                            <tr><td colspan="4" class="text-right bold">Total Material</td><td colspan="2" class="num bold">4.800.000</td><td colspan="2" class="num"></td><td class="num"></td></tr>
+                            <tr><td colspan="4" class="text-right bold">Total Jasa</td><td colspan="2" class="num"></td><td colspan="2" class="num bold">32.000.000</td><td class="num"></td></tr>
+                            <tr><td colspan="4" class="text-right bold">PPN 11%</td><td colspan="4" class="num"></td><td class="num bold">4.048.000</td></tr>
+                            <tr><td colspan="8" class="text-right bold" style="background:#f0f0f0;">QUOTE TOTAL</td><td class="num bold" style="background:#f0f0f0;">40.848.000</td></tr>
                         </tbody>
                     </table>
-                    <div style="margin-top:20px; font-size:9pt;">
-                        <p><strong>Keterangan:</strong></p>
-                        <p>a. Pembayaran 50% DP paling lambat 1 minggu setelah PO terkirim<br>b. Pelunasan 50%, setelah pekerjaan selesai dan berita acara ditandatangani<br>c. Maksimal pembayaran pelunasan, 30 hari setelah invoice dikirim<br>d. Harga belum termasuk sewa genset eksternal</p>
+
+                    <div style="margin-top:15px; font-size:9pt;">
+                        <p><strong>Keterangan :</strong></p>
+                        <p>a. Pembayaran 50% DP paling lambat 1 minggu setelah PO terkirim<br>
+                        b. Pelunasan 50%, setelah pekerjaan selesai dan berita acara ditandatangani<br>
+                        c. Maksimal pembayaran pelunasan, 30 hari setelah invoice dikirim<br>
+                        d. Harga belum termasuk sewa genset eksternal</p>
                     </div>
-                    <div style="margin-top:30px; display:flex; justify-content:space-between; page-break-inside:avoid;">
-                        <div style="width:48%;">
-                            <p>Pembayaran transfer dapat dilakukan melalui:<br><strong>Bank Mandiri</strong><br>No. Rekening: 1190011250964<br>Cabang: Jakarta Sawah Besar<br>A/n: PT. NIKAWAN SOLUSINDO SEJAHTERA</p>
-                            <p style="margin-top:10px; font-size:8pt;">Jika ada yang ingin ditanyakan terkait penawaran ini harap menghubungi kontak dibawah ini:<br>(+62) 82249804379, (+62) 81293101282<br>email: nikawan.ss@gmail.com, marketing@nikawan-solusindo.com, finance@nikawan-solusindo.com</p>
-                        </div>
-                        <div style="width:48%; text-align:center;">
-                            <p>Best regards,<br>Approved by,</p>
+
+                    <div style="margin-top:20px; font-size:9pt;">
+                        <p>Pembayaran transfer dapat dilakukan melalui Bank Mandiri dengan No. Rekening <strong>1190011250964</strong> Mandiri, Cab. Jakarta Sawah Besar A/n PT. NIKAWAN SOLUSINDO SEJAHTERA.</p>
+                        <p>Jika ada yang ingin ditanyakan terkait penawaran ini harap menghubungi kontak dibawah ini,<br>(+62) 82249804379, (+62) 81293101282, email: nikawan.ss@gmail.com, marketing@nikawan-solusindo.com, finance@nikawan-solusindo.com</p>
+                    </div>
+
+                    <div style="margin-top:40px; display:flex; justify-content:space-between; page-break-inside:avoid;">
+                        <div style="width:48%; text-align:left;">
+                            <p>Best regards,</p>
                             <div style="height:60px;">${sigTag}</div>
                             <p style="font-weight:bold;">( Hermawan Susanto )</p>
+                        </div>
+                        <div style="width:48%; text-align:center;">
+                            <p>Approved by,</p>
+                            <div style="height:60px;"></div>
                             <p style="font-size:8pt;">Please sign and send back by email</p>
                         </div>
-                    </div>`;
+                    </div>
+                `;
             } 
-            // Template untuk Invoice
+            // FORMAT INVOICE (Sesuai NSS-INV-XI26-002)
             else if (['invoice_dp', 'invoice_pelunasan'].includes(stage.id)) {
                 const dpp = Math.round(proj.value / 1.12);
                 const ppn = proj.value - dpp;
                 docContent = `
                     <div class="doc-header keep-together">
+                        <div class="doc-header-left">
+                            <h1>PT. NIKAWAN SOLUSINDO SEJAHTERA</h1>
+                            <p>Puri Flamingo Blok FLA 5 no 19, RT. 08/11, Kel. Sukamantri Kec. Pasar Kemis, Kab. Tangerang- Banten<br>
+                            (+62) 82249804379, (+62) 85777352179, email: admin@nikawan-solusindo.com finance@nikawan-solusindo.com, marketing@nikawan-solusindo.com</p>
+                        </div>
                         ${logoTag}
-                        <h1>PT. NIKAWAN SOLUSINDO SEJAHTERA</h1>
-                        <p>Puri Flamingo Blok FLA 5 no 19, RT. 08/11, Kel. Sukamantri Kec. Pasar Kemis, Kab. Tangerang- Banten<br>
-                        (+62) 82249804379, (+62) 85777352179, email: admin@nikawan-solusindo.com finance@nikawan-solusindo.com, marketing@nikawan-solusindo.com</p>
                     </div>
                     <div style="text-align:center; margin: 20px 0;"><h2 style="font-size:14pt; font-weight:bold;">INVOICE</h2></div>
                     <table style="width:100%; margin-bottom:20px; font-size:9pt; border:none;">
@@ -819,13 +872,15 @@
                         </div>
                     </div>`;
             }
-            // Template untuk PO
+            // FORMAT PO PEMBELIAN (Sesuai PO Distritama)
             else if (stage.id === 'po_customer') {
                 docContent = `
                     <div class="doc-header keep-together">
+                        <div class="doc-header-left">
+                            <h1>PURCHASE ORDER</h1>
+                            <p style="font-size:10pt; font-weight:bold;">${proj.project_number}</p>
+                        </div>
                         ${logoTag}
-                        <h1>PURCHASE ORDER</h1>
-                        <p style="font-size:10pt; font-weight:bold;">${proj.project_number}</p>
                     </div>
                     <table style="width:100%; margin-bottom:20px; font-size:9pt; border:1px solid #000;">
                         <tr><td style="border:1px solid #000; padding:5px;"><strong>Kpd, Nama Vendor:</strong> ${proj.vendor_name || 'Nama Vendor'}</td></tr>
@@ -853,14 +908,16 @@
                     </div>
                     <div style="margin-top:20px; font-size:8pt; text-align:center; border-top:1px solid #ccc; padding-top:10px;">PT. Nikawan Solusindo Sejahtera/ CS 1: 0822 4980 4379, CS 2: 0812 9310 1282, email: finance@nikawan-solusindo.com</div>`;
             }
-            // Template untuk BAST
+            // FORMAT BAST (Sesuai BAST Aica Indria)
             else if (stage.id === 'bast_report') {
                 docContent = `
                     <div class="doc-header keep-together">
+                        <div class="doc-header-left">
+                            <h1>PT. NIKAWAN SOLUSINDO SEJAHTERA</h1>
+                            <p>Puri Flamingo Blok FLA 5 No. 19, RT 08, RW 11 Kel. Sukamantri, Kec. Pasar Kemis, Kab. Tangerang, Banten 15560<br>
+                            CS 1: 0822 4980 4379, CS 2: 0812 9310 1282 e-mail: nikawan.ss@gmail.com/marketing@nikawan-solusindo.com /finance@nikawan-solusindo.com website: www.nikawan-solusindo.com</p>
+                        </div>
                         ${logoTag}
-                        <h1>PT. NIKAWAN SOLUSINDO SEJAHTERA</h1>
-                        <p>Puri Flamingo Blok FLA 5 No. 19, RT 08, RW 11 Kel. Sukamantri, Kec. Pasar Kemis, Kab. Tangerang, Banten 15560<br>
-                        CS 1: 0822 4980 4379, CS 2: 0812 9310 1282 e-mail: nikawan.ss@gmail.com/marketing@nikawan-solusindo.com /finance@nikawan-solusindo.com website: www.nikawan-solusindo.com</p>
                     </div>
                     <div style="text-align:center; margin: 20px 0;"><h2 style="font-size:14pt; font-weight:bold; text-decoration:underline;">BERITA ACARA SERAH TERIMA PEKERJAAN</h2></div>
                     <p style="text-align:center; margin-bottom:20px;"><strong>Nomer: NSS/BAST/${new Date().toLocaleString('id-ID', {month:'short'}).toUpperCase()}/26/0003</strong></p>
@@ -881,12 +938,14 @@
                         <div class="bast-party"><p><strong>PIHAK PERTAMA,</strong><br>Yang Menyerahkan,</p><div class="signature-line">${sigTag}</div><p style="font-weight:bold;">( Hermawan Susanto )</p><p>PT. Nikawan Solusindo Sejahtera</p></div>
                     </div>`;
             } else {
-                // Fallback untuk tahap lain yang belum punya template spesifik
+                // Fallback template
                 docContent = `
                     <div class="doc-header keep-together">
+                        <div class="doc-header-left">
+                            <h1>PT. NIKAWAN SOLUSINDO SEJAHTERA</h1>
+                            <p>Puri Flamingo Blok FLA 5 No. 19, RT 08, RW 11 Kel. Sukamantri, Kec. Pasar Kemis, Kab. Tangerang, Banten 15560</p>
+                        </div>
                         ${logoTag}
-                        <h1>PT. NIKAWAN SOLUSINDO SEJAHTERA</h1>
-                        <p>Puri Flamingo Blok FLA 5 No. 19, RT 08, RW 11 Kel. Sukamantri, Kec. Pasar Kemis, Kab. Tangerang, Banten 15560</p>
                     </div>
                     <div style="text-align:center; margin: 40px 0;"><h2 style="font-size:14pt; font-weight:bold;">DOKUMEN RESMI</h2><p>${stage.name}</p></div>
                     <p style="text-align:center;">Nomor Proyek: ${proj.project_number}<br>Tanggal: ${today}</p>
