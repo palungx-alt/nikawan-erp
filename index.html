@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIKAWAN ERP V28 - Form Input & Auto Archive</title>
+    <title>NIKAWAN ERP V29 - Professional Form & Print</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -100,10 +100,10 @@
         .items-table input { width: 100%; padding: 6px; border: 1px solid transparent; background: transparent; font-size: 12px; }
         .items-table input:focus { border-color: var(--nikawan-blue); background: white; outline: none; border-radius: 4px; }
 
-        /* --- PRINT STYLES EXACT MATCH --- */
+        /* --- PRINT STYLES PROFESSIONAL & RAPI --- */
         #printArea { display: none; }
         @media print {
-            @page { size: A4; margin: 15mm 20mm; }
+            @page { size: A4; margin: 15mm 20mm; } /* Margin standar dokumen bisnis */
             body * { visibility: hidden; }
             #printArea, #printArea * { visibility: visible; }
             
@@ -137,6 +137,7 @@
             .bold { font-weight: bold; }
             .uppercase { text-transform: uppercase; }
             
+            /* Hilangkan elemen UI lain saat print */
             .no-print { display: none !important; }
         }
     </style>
