@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIKAWAN ERP V23 - Exact Quotation Format</title>
+    <title>NIKAWAN ERP V24 - Dynamic Items & Fixed Upload</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -75,9 +75,10 @@
         .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
         .btn-danger { background: var(--danger); color: white; }
         .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-xs { padding: 4px 8px; font-size: 11px; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10,35,66,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
-        .modal-box { background: var(--bg-card); width: 550px; max-width: 90%; max-height: 90vh; border-radius: 20px; border: 1px solid var(--border); display: flex; flex-direction: column; }
+        .modal-box { background: var(--bg-card); width: 650px; max-width: 95%; max-height: 90vh; border-radius: 20px; border: 1px solid var(--border); display: flex; flex-direction: column; }
         .modal-header { padding: 24px 30px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .modal-body { padding: 30px; overflow-y: auto; flex: 1; }
         .modal-footer { padding: 20px 30px; border-top: 1px solid var(--border); text-align: right; background: #F8FAFC; border-radius: 0 0 20px 20px; }
@@ -91,6 +92,13 @@
         .spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--nikawan-blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Dynamic Items Table in Modal */
+        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 12px; }
+        .items-table th { background: #F1F5F9; padding: 8px; text-align: left; font-weight: 600; color: var(--text-muted); border: 1px solid var(--border); }
+        .items-table td { padding: 8px; border: 1px solid var(--border); }
+        .items-table input { width: 100%; padding: 6px; border: 1px solid transparent; background: transparent; font-size: 12px; }
+        .items-table input:focus { border-color: var(--nikawan-blue); background: white; outline: none; border-radius: 4px; }
 
         /* --- PRINT STYLES EXACT MATCH --- */
         #printArea { display: none; }
@@ -202,14 +210,34 @@
         </div>
     </div>
 
-    <!-- MODAL FORM PROYEK BARU -->
+    <!-- MODAL FORM PROYEK BARU DENGAN INPUT ITEM DINAMIS -->
     <div id="projectModal" class="modal-overlay">
         <div class="modal-box">
-            <div class="modal-header"><h3 style="color: var(--nikawan-blue);">Mulai Proyek Baru</h3><button onclick="closeModal('projectModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
+            <div class="modal-header"><h3 style="color: var(--nikawan-blue);">Mulai Proyek / Penawaran Baru</h3><button onclick="closeModal('projectModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
             <div class="modal-body">
-                <div class="form-group"><label>Nomor Proyek (Otomatis)</label><input id="projNumber" class="form-control" readonly style="background:#e2e8f0; color:#64748b; cursor:not-allowed;"></div>
-                <div class="form-group"><label>Nilai Proyek (Rp)</label><input type="number" id="projValue" class="form-control" placeholder="Contoh: 50000000"></div>
-                <div class="form-group"><label>Deskripsi Pekerjaan</label><textarea id="projDesc" class="form-control" rows="3" placeholder="Jelaskan detail pekerjaan..."></textarea></div>
+                <div class="form-group"><label>Nomor Proyek/Penawaran (Otomatis)</label><input id="projNumber" class="form-control" readonly style="background:#e2e8f0; color:#64748b; cursor:not-allowed;"></div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 13px; color: var(--text-muted); font-weight: 600; display:block; margin-bottom:8px;">Detail Item Penawaran</label>
+                    <table class="items-table" id="itemsTable">
+                        <thead>
+                            <tr>
+                                <th style="width:40%;">Deskripsi Pekerjaan</th>
+                                <th style="width:10%;">Qty</th>
+                                <th style="width:10%;">Satuan</th>
+                                <th style="width:15%;">Harga Material</th>
+                                <th style="width:15%;">Harga Jasa</th>
+                                <th style="width:10%;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsBody">
+                            <!-- Rows will be added here dynamically -->
+                        </tbody>
+                    </table>
+                    <button type="button" class="btn btn-outline btn-xs" onclick="addItemRow()"><i class="fas fa-plus"></i> Tambah Baris Item</button>
+                </div>
+
+                <div class="form-group"><label>Catatan Tambahan / Keterangan</label><textarea id="projDesc" class="form-control" rows="2" placeholder="Contoh: Harga belum termasuk sewa genset..."></textarea></div>
             </div>
             <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('projectModal')">Batal</button><button class="btn btn-primary" onclick="submitNewProject()"><i class="fas fa-save"></i> Simpan Proyek</button></div>
         </div>
@@ -293,7 +321,7 @@
         
         // State untuk Filter & Search
         let allClientsData = [];
-        let currentFilter = 'all'; // all, 1m, 6m, 12m
+        let currentFilter = 'all'; 
         let searchQuery = '';
 
         // ALUR KERJA 11 TAHAP SESUAI SOP
@@ -414,7 +442,6 @@
         function applyFiltersAndRender() {
             let filtered = [...allClientsData];
 
-            // 1. Filter Pencarian
             if (searchQuery) {
                 const q = searchQuery.toLowerCase();
                 filtered = filtered.filter(c => 
@@ -423,15 +450,12 @@
                 );
             }
 
-            // 2. Filter Waktu (1/6/12 Bulan)
             if (currentFilter !== 'all') {
                 const now = new Date();
                 let cutoffDate = new Date();
-                
                 if (currentFilter === '1m') cutoffDate.setMonth(now.getMonth() - 1);
                 else if (currentFilter === '6m') cutoffDate.setMonth(now.getMonth() - 6);
                 else if (currentFilter === '12m') cutoffDate.setFullYear(now.getFullYear() - 1);
-
                 filtered = filtered.filter(c => new Date(c.created_at) >= cutoffDate);
             }
 
@@ -440,7 +464,6 @@
 
         function renderClientGrid(clients) {
             const container = document.getElementById('appContent');
-            
             container.innerHTML = `
                 <div class="client-controls">
                     <div class="search-box">
@@ -464,7 +487,6 @@
                         let statusClass = 'status-pending'; 
                         let badgeClass = 'badge-pending';
                         let badgeText = 'Baru';
-                        
                         return `
                         <div id="card-${c.id}" class="client-card ${statusClass}" onclick="selectClient('${c.id}')">
                             <span class="status-badge ${badgeClass}">${badgeText}</span>
@@ -492,7 +514,6 @@
             const { data: proj } = await sb.from('projects').select('*').eq('customer_id', clientId).single();
             currentProjectId = proj?.id;
 
-            // Update warna kartu berdasarkan status proyek
             if (activeCard) {
                 activeCard.classList.remove('status-pending', 'status-active', 'status-completed');
                 activeCard.querySelector('.status-badge')?.remove();
@@ -599,26 +620,77 @@
             if(confirm('Hapus client?')) { await sb.from('customers').update({ status: 'deleted' }).eq('id', id); renderClients(); }
         }
 
+        // --- LOGIKA FORM PROYEK BARU DENGAN ITEM DINAMIS ---
+        function addItemRow() {
+            const tbody = document.getElementById('itemsBody');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><input type="text" class="item-desc" placeholder="Deskripsi pekerjaan..."></td>
+                <td><input type="number" class="item-qty" placeholder="0" min="1"></td>
+                <td><input type="text" class="item-unit" placeholder="Unit"></td>
+                <td><input type="number" class="item-mat" placeholder="0" min="0"></td>
+                <td><input type="number" class="item-jasa" placeholder="0" min="0"></td>
+                <td style="text-align:center;"><button type="button" class="btn btn-danger btn-xs" onclick="this.closest('tr').remove()"><i class="fas fa-trash"></i></button></td>
+            `;
+            tbody.appendChild(row);
+        }
+
         async function openProjectModal(clientId) {
             tempClientIdForProject = clientId;
             showLoading(true);
             const { data: autoNum, error } = await sb.rpc('generate_project_number');
             if (error) { console.error(error); alert('Gagal generate nomor otomatis.'); showLoading(false); return; }
+            
             document.getElementById('projNumber').value = autoNum;
-            document.getElementById('projValue').value = '';
             document.getElementById('projDesc').value = '';
+            document.getElementById('itemsBody').innerHTML = ''; // Reset items
+            addItemRow(); // Add first empty row
+            
             showLoading(false);
             document.getElementById('projectModal').style.display = 'flex';
         }
 
         async function submitNewProject() {
             const num = document.getElementById('projNumber').value;
-            const val = document.getElementById('projValue').value;
             const desc = document.getElementById('projDesc').value;
-            if(!val) return alert('Nilai proyek wajib diisi');
+            
+            // Collect items data
+            const rows = document.querySelectorAll('#itemsBody tr');
+            let itemsData = [];
+            let totalValue = 0;
+
+            rows.forEach(row => {
+                const d = row.querySelector('.item-desc').value;
+                const q = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const u = row.querySelector('.item-unit').value;
+                const m = parseFloat(row.querySelector('.item-mat').value) || 0;
+                const j = parseFloat(row.querySelector('.item-jasa').value) || 0;
+                
+                if(d && q > 0) {
+                    itemsData.push({ desc: d, qty: q, unit: u, mat: m, jasa: j, total: (m+j)*q });
+                    totalValue += (m+j)*q;
+                }
+            });
+
+            if(itemsData.length === 0) return alert('Isi minimal 1 item pekerjaan');
 
             showLoading(true);
-            const { error } = await sb.from('projects').insert({ customer_id: tempClientIdForProject, project_number: num, value: parseInt(val), description: desc || '-' });
+            // Save project with items stored as JSON in description or separate field if you have one
+            // For now, we store summary in description and full items in a custom field if available, 
+            // or just use description for notes and rely on print template logic.
+            // Let's store items as JSON string in 'description' for simplicity in this schema, 
+            // or better, use a dedicated 'items_json' column if you added it. 
+            // Assuming standard schema, we'll put summary in desc and full JSON in a meta field if possible.
+            // For V24, let's store items JSON in 'description' prefixed with [ITEMS] so we can parse it later.
+            
+            const payload = {
+                customer_id: tempClientIdForProject, 
+                project_number: num, 
+                value: totalValue, 
+                description: JSON.stringify(itemsData) // Store items as JSON
+            };
+
+            const { error } = await sb.from('projects').insert(payload);
             showLoading(false);
             if(error) alert('Gagal menyimpan proyek: ' + error.message);
             else { closeModal('projectModal'); selectClient(tempClientIdForProject); }
@@ -685,22 +757,62 @@
             }
         }
 
+        // --- FIXED UPLOAD LOGIC ---
         async function handleUploadFile() {
             const file = document.getElementById('upFile').files[0];
             const docType = document.getElementById('upDocType').value;
             if(!file || !currentProjectId) return alert('Pilih file dan pastikan proyek aktif');
+            
             showLoading(true);
             try {
                 const fileName = `${currentProjectId}/${Date.now()}_${file.name}`;
-                const { error: uploadErr } = await sb.storage.from('documents').upload(fileName, file);
-                if(uploadErr) throw uploadErr;
+                
+                // 1. Upload to Storage
+                const { data: storageData, error: uploadErr } = await sb.storage.from('documents').upload(fileName, file);
+                if(uploadErr) throw new Error('Gagal upload ke storage: ' + uploadErr.message);
+                
+                // 2. Get Public URL
                 const { data: urlData } = sb.storage.from('documents').getPublicUrl(fileName);
+                
+                // 3. Generate Doc Number
                 let docNum = document.getElementById('upDocNumber').value;
-                if(!docNum) { const prefix = docType.substring(0,3).toUpperCase(); const { data: seqData } = await sb.rpc('get_next_doc_number', { prefix: prefix }); docNum = seqData; }
-                await sb.from('documents').insert({ project_id: currentProjectId, doc_type: docType, doc_number: docNum, drive_file_id: fileName, drive_url: urlData.publicUrl });
-                alert('Dokumen berhasil diupload!'); closeModal('uploadModal'); selectClient(selectedClientId);
-            } catch(err) { alert('Gagal upload: ' + err.message); } 
-            finally { showLoading(false); }
+                if(!docNum) { 
+                    const prefix = docType.substring(0,3).toUpperCase(); 
+                    const { data: seqData } = await sb.rpc('get_next_doc_number', { prefix: prefix }); 
+                    docNum = seqData; 
+                }
+
+                // 4. Save to Database with Retry Logic for RLS
+                let dbSuccess = false;
+                let attempts = 0;
+                while(!dbSuccess && attempts < 3) {
+                    const { error: dbErr } = await sb.from('documents').insert({ 
+                        project_id: currentProjectId, 
+                        doc_type: docType, 
+                        doc_number: docNum, 
+                        drive_file_id: fileName, 
+                        drive_url: urlData.publicUrl 
+                    });
+                    
+                    if(dbErr) {
+                        console.warn(`Attempt ${attempts+1} failed:`, dbErr);
+                        attempts++;
+                        await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
+                    } else {
+                        dbSuccess = true;
+                    }
+                }
+
+                if(!dbSuccess) throw new Error('Gagal simpan data ke database setelah 3x percobaan. Cek RLS Policy.');
+
+                alert('Dokumen berhasil diupload!'); 
+                closeModal('uploadModal'); 
+                selectClient(selectedClientId);
+            } catch(err) { 
+                alert('Gagal upload: ' + err.message); 
+            } finally { 
+                showLoading(false); 
+            }
         }
 
         async function openUserModal() { if(currentUser.role !== 'super_admin') return alert('Akses ditolak.'); document.getElementById('userModal').style.display = 'flex'; }
@@ -713,7 +825,7 @@
             if(error) alert('Gagal: ' + error.message); else { alert('User berhasil ditambahkan'); closeModal('userModal'); }
         }
 
-        // --- TEMPLATE GENERATOR (EXACT MATCH DENGAN CONTOH DOKUMEN) ---
+        // --- TEMPLATE GENERATOR (EXACT WORDS + DYNAMIC ITEMS) ---
         async function generateTemplate() {
             if(!currentProjectId) return alert('Tidak ada proyek aktif');
             showLoading(true);
@@ -728,10 +840,45 @@
             const stage = STAGES.find(s => s.id === proj.current_stage);
             if (!stage) return alert('Tahap proyek tidak dikenali.');
 
+            // Parse items from description (stored as JSON)
+            let items = [];
+            try { items = JSON.parse(proj.description); } catch(e) { items = []; }
+            
+            // Calculate totals dynamically
+            let totalMat = 0, totalJasa = 0;
+            items.forEach(i => {
+                totalMat += (i.mat * i.qty);
+                totalJasa += (i.jasa * i.qty);
+            });
+            const subtotal = totalMat + totalJasa;
+            const ppn = Math.round(subtotal * 0.11);
+            const grandTotal = subtotal + ppn;
+
             let docContent = '';
 
-            // FORMAT QUOTATION EXACT MATCH (NSS-Q-X-26-006)
+            // FORMAT QUOTATION EXACT MATCH (NSS-Q-X-26-006) WITH DYNAMIC DATA
             if (['permintaan_sales', 'pembuatan_penawaran', 'kirim_email'].includes(stage.id)) {
+                let rowsHtml = '';
+                items.forEach((item, index) => {
+                    const matTotal = item.mat * item.qty;
+                    const jasaTotal = item.jasa * item.qty;
+                    const rowTotal = matTotal + jasaTotal;
+                    
+                    rowsHtml += `
+                        <tr>
+                            <td class="center">${index + 1}</td>
+                            <td>${item.desc}</td>
+                            <td class="center">${item.qty}</td>
+                            <td class="center">${item.unit}</td>
+                            <td class="num">${item.mat > 0 ? item.mat.toLocaleString('id-ID') + ' Rp' : '-Rp'}</td>
+                            <td class="num">${matTotal > 0 ? matTotal.toLocaleString('id-ID') + ' Rp' : '-Rp'}</td>
+                            <td class="num">${item.jasa > 0 ? item.jasa.toLocaleString('id-ID') + ' Rp' : '-Rp'}</td>
+                            <td class="num">${jasaTotal > 0 ? jasaTotal.toLocaleString('id-ID') + ' Rp' : '-Rp'}</td>
+                            <td class="num bold">${rowTotal.toLocaleString('id-ID') + ' Rp'}</td>
+                        </tr>
+                    `;
+                });
+
                 docContent = `
                     <div class="doc-header keep-together">
                         <div class="doc-header-left">
@@ -754,7 +901,7 @@
                     </div>
 
                     <table style="width:100%; margin-bottom:20px; font-size:9pt; border:none;">
-                        <tr><td style="border:none; width:15%;"><strong>Kepada Yth,</strong></td><td style="border:none;"><strong>Bapak Alvino</strong></td></tr>
+                        <tr><td style="border:none; width:15%;"><strong>Kepada Yth,</strong></td><td style="border:none;"><strong>Bapak/Ibu ${proj.customers.pic || 'Client'}</strong></td></tr>
                         <tr><td style="border:none;"><strong>Nama pelanggan</strong></td><td style="border:none;">: ${proj.customers.name}</td></tr>
                         <tr><td style="border:none;"><strong>Alamat pelanggan</strong></td><td style="border:none;">: ${proj.customers.address || 'Alamat Client'}</td></tr>
                         <tr><td style="border:none;"><strong>Phone, email</strong></td><td style="border:none;">: ${proj.customers.email || '-'}</td></tr>
@@ -781,23 +928,12 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- Baris item statis sesuai contoh, bisa dikembangkan jadi dinamis nanti -->
-                            <tr><td class="center">1</td><td>MAINTENANCE TRAFO TR1 1000KVA Meliputi:<br>* Test Transformer Turn Ratio<br>* Test Insulation Resistance<br>* Tightening Nut/Bolt trafo<br>* Cleaning trafo<br>* Function protection check</td><td class="center">1</td><td class="center">Unit</td><td class="num">-</td><td class="num">-</td><td class="num">5.000.000</td><td class="num">5.000.000</td><td class="num">5.000.000</td></tr>
-                            <tr><td class="center">2</td><td>Penggantian seal HV PIB</td><td class="center">1</td><td class="center">Set</td><td class="num">1.500.000</td><td class="num">1.500.000</td><td class="num">1.500.000</td><td class="num">1.500.000</td><td class="num">3.000.000</td></tr>
-                            <tr><td class="center">3</td><td>Penggantian seal LV 1/2000A</td><td class="center">1</td><td class="center">Set</td><td class="num">2.000.000</td><td class="num">2.000.000</td><td class="num">1.500.000</td><td class="num">1.500.000</td><td class="num">3.500.000</td></tr>
-                            <tr><td class="center">4</td><td>Maintenance Panel LV</td><td class="center">1</td><td class="center">Cell</td><td class="num">-</td><td class="num">-</td><td class="num">2.500.000</td><td class="num">2.500.000</td><td class="num">2.500.000</td></tr>
-                            <tr><td class="center">5</td><td>Maintenance Panel MV<br>Insulation resistance, cek kekencangan mur dan baut, cleaning</td><td class="center">2</td><td class="center">Cell</td><td class="num">-</td><td class="num">-</td><td class="num">2.500.000</td><td class="num">5.000.000</td><td class="num">5.000.000</td></tr>
-                            <tr><td class="center">6</td><td>Cleaning gardu</td><td class="center">1</td><td class="center">Lot</td><td class="num">-</td><td class="num">-</td><td class="num">1.000.000</td><td class="num">1.000.000</td><td class="num">1.000.000</td></tr>
-                            <tr><td class="center">7</td><td>Purification Oil Trafo 1 x 1000 kVA+ BDV Oil</td><td class="center">1</td><td class="center">Unit</td><td class="num">-</td><td class="num">-</td><td class="num">5.500.000</td><td class="num">5.500.000</td><td class="num">5.500.000</td></tr>
-                            <tr><td class="center">8</td><td>Material Oil Trafo</td><td class="center">20</td><td class="center">Liter</td><td class="num">65.000</td><td class="num">1.300.000</td><td class="num">-</td><td class="num">-</td><td class="num">1.300.000</td></tr>
-                            <tr><td class="center">9</td><td>DGA Oil Test, before& after purification</td><td class="center">2</td><td class="center">Sample</td><td class="num">-</td><td class="num">-</td><td class="num">3.000.000</td><td class="num">6.000.000</td><td class="num">6.000.000</td></tr>
-                            <tr><td class="center">10</td><td>Transportasi dan Akomodasi</td><td class="center">1</td><td class="center">Lot</td><td class="num">-</td><td class="num">-</td><td class="num">2.000.000</td><td class="num">2.000.000</td><td class="num">2.000.000</td></tr>
-                            <tr><td class="center">11</td><td>Koordinasi pengurusan PLN</td><td class="center">1</td><td class="center">Lot</td><td class="num">-</td><td class="num">-</td><td class="num">2.000.000</td><td class="num">2.000.000</td><td class="num">2.000.000</td></tr>
+                            ${rowsHtml}
                             
-                            <tr><td colspan="4" class="text-right bold">Total Material</td><td colspan="2" class="num bold">4.800.000</td><td colspan="2" class="num"></td><td class="num"></td></tr>
-                            <tr><td colspan="4" class="text-right bold">Total Jasa</td><td colspan="2" class="num"></td><td colspan="2" class="num bold">32.000.000</td><td class="num"></td></tr>
-                            <tr><td colspan="4" class="text-right bold">PPN 11%</td><td colspan="4" class="num"></td><td class="num bold">4.048.000</td></tr>
-                            <tr><td colspan="8" class="text-right bold" style="background:#f0f0f0;">QUOTE TOTAL</td><td class="num bold" style="background:#f0f0f0;">40.848.000</td></tr>
+                            <tr><td colspan="4" class="text-right bold">Total Material</td><td colspan="2" class="num bold">${totalMat.toLocaleString('id-ID')} Rp</td><td colspan="2" class="num"></td><td class="num"></td></tr>
+                            <tr><td colspan="4" class="text-right bold">Total Jasa</td><td colspan="2" class="num"></td><td colspan="2" class="num bold">${totalJasa.toLocaleString('id-ID')} Rp</td><td class="num"></td></tr>
+                            <tr><td colspan="8" class="text-right bold">PPN 11%</td><td class="num bold">${ppn.toLocaleString('id-ID')} Rp</td></tr>
+                            <tr><td colspan="8" class="text-right bold" style="background:#f0f0f0;">QUOTE TOTAL</td><td class="num bold" style="background:#f0f0f0;">${grandTotal.toLocaleString('id-ID')}</td></tr>
                         </tbody>
                     </table>
 
@@ -828,11 +964,11 @@
                     </div>
                 `;
             } 
-            // FORMAT INVOICE (Sesuai NSS-INV-XI26-002)
+            // ... (Other templates like Invoice, PO, BAST remain similar but use dynamic data) ...
             else if (['invoice_dp', 'invoice_pelunasan'].includes(stage.id)) {
-                const dpp = Math.round(proj.value / 1.12);
-                const ppn = proj.value - dpp;
-                docContent = `
+                 const dpp = Math.round(grandTotal / 1.12);
+                 const ppnInv = grandTotal - dpp;
+                 docContent = `
                     <div class="doc-header keep-together">
                         <div class="doc-header-left">
                             <h1>PT. NIKAWAN SOLUSINDO SEJAHTERA</h1>
@@ -850,16 +986,16 @@
                     <table class="doc-table keep-together">
                         <thead><tr><th style="width:5%;">No</th><th style="width:45%;">Deskripsi</th><th style="width:8%;">Qty</th><th style="width:10%;">Satuan</th><th style="width:15%;">Harga</th><th style="width:17%;">Total</th></tr></thead>
                         <tbody>
-                            <tr><td class="center">1</td><td>${proj.description}</td><td class="center">1</td><td class="center">Lot</td><td class="num">${proj.value.toLocaleString('id-ID')}</td><td class="num">${proj.value.toLocaleString('id-ID')}</td></tr>
-                            <tr><td colspan="5" class="text-right bold">Jumlah</td><td class="num bold">${proj.value.toLocaleString('id-ID')}</td></tr>
+                            ${items.map((item, idx) => `<tr><td class="center">${idx+1}</td><td>${item.desc}</td><td class="center">${item.qty}</td><td class="center">${item.unit}</td><td class="num">${(item.mat+item.jasa).toLocaleString('id-ID')}</td><td class="num">${((item.mat+item.jasa)*item.qty).toLocaleString('id-ID')}</td></tr>`).join('')}
+                            <tr><td colspan="5" class="text-right bold">Jumlah</td><td class="num bold">${subtotal.toLocaleString('id-ID')}</td></tr>
                             <tr><td colspan="5" class="text-right bold">Disc</td><td class="num">-</td></tr>
-                            <tr><td colspan="5" class="text-right bold">After Disc</td><td class="num">${proj.value.toLocaleString('id-ID')}</td></tr>
+                            <tr><td colspan="5" class="text-right bold">After Disc</td><td class="num">${subtotal.toLocaleString('id-ID')}</td></tr>
                             <tr><td colspan="5" class="text-right bold">DPP</td><td class="num">${dpp.toLocaleString('id-ID')}</td></tr>
-                            <tr><td colspan="5" class="text-right bold">PPN 12%</td><td class="num">${ppn.toLocaleString('id-ID')}</td></tr>
-                            <tr><td colspan="5" class="text-right bold" style="background:#f0f0f0;">Grand Total</td><td class="num bold" style="background:#f0f0f0;">${proj.value.toLocaleString('id-ID')}</td></tr>
+                            <tr><td colspan="5" class="text-right bold">PPN 12%</td><td class="num">${ppnInv.toLocaleString('id-ID')}</td></tr>
+                            <tr><td colspan="5" class="text-right bold" style="background:#f0f0f0;">Grand Total</td><td class="num bold" style="background:#f0f0f0;">${grandTotal.toLocaleString('id-ID')}</td></tr>
                         </tbody>
                     </table>
-                    <p style="margin:15px 0; font-style:italic; font-size:9pt;">Terbilang: "${numberToWords(proj.value)} Rupiah"</p>
+                    <p style="margin:15px 0; font-style:italic; font-size:9pt;">Terbilang: "${numberToWords(grandTotal)} Rupiah"</p>
                     <div style="margin-top:20px; font-size:9pt;">
                         <p>Pembayaran transfer/ giro dapat dilakukan melalui:<br><strong>Bank Mandiri Cabang Jakarta Sawah Besar</strong><br>No Rek : 1190011250964<br>A/N : PT. NIKAWAN SOLUSINDO SEJAHTERA</p>
                     </div>
@@ -872,7 +1008,6 @@
                         </div>
                     </div>`;
             }
-            // FORMAT PO PEMBELIAN (Sesuai PO Distritama)
             else if (stage.id === 'po_customer') {
                 docContent = `
                     <div class="doc-header keep-together">
@@ -891,10 +1026,10 @@
                     <table class="doc-table keep-together">
                         <thead><tr><th style="width:5%;">No.</th><th style="width:45%;">Deskripsi</th><th style="width:8%;">Qty</th><th style="width:10%;">Satuan</th><th style="width:15%;">Harga Satuan</th><th style="width:17%;">Total</th></tr></thead>
                         <tbody>
-                            <tr><td class="center">1</td><td>${proj.description}</td><td class="center">1</td><td class="center">Unit</td><td class="num">${proj.value.toLocaleString('id-ID')}</td><td class="num">${proj.value.toLocaleString('id-ID')}</td></tr>
-                            <tr><td colspan="5" class="text-right bold">Sub Total</td><td class="num">${proj.value.toLocaleString('id-ID')}</td></tr>
-                            <tr><td colspan="5" class="text-right bold">PPN 11%</td><td class="num">${(proj.value * 0.11).toLocaleString('id-ID')}</td></tr>
-                            <tr><td colspan="5" class="text-right bold" style="background:#f0f0f0;">Grand Total</td><td class="num bold" style="background:#f0f0f0;">${(proj.value * 1.11).toLocaleString('id-ID')}</td></tr>
+                            ${items.map((item, idx) => `<tr><td class="center">${idx+1}</td><td>${item.desc}</td><td class="center">${item.qty}</td><td class="center">${item.unit}</td><td class="num">${(item.mat+item.jasa).toLocaleString('id-ID')}</td><td class="num">${((item.mat+item.jasa)*item.qty).toLocaleString('id-ID')}</td></tr>`).join('')}
+                            <tr><td colspan="5" class="text-right bold">Sub Total</td><td class="num">${subtotal.toLocaleString('id-ID')}</td></tr>
+                            <tr><td colspan="5" class="text-right bold">PPN 11%</td><td class="num">${ppn.toLocaleString('id-ID')}</td></tr>
+                            <tr><td colspan="5" class="text-right bold" style="background:#f0f0f0;">Grand Total</td><td class="num bold" style="background:#f0f0f0;">${grandTotal.toLocaleString('id-ID')}</td></tr>
                         </tbody>
                     </table>
                     <div style="margin-top:20px; font-size:9pt;">
@@ -908,7 +1043,6 @@
                     </div>
                     <div style="margin-top:20px; font-size:8pt; text-align:center; border-top:1px solid #ccc; padding-top:10px;">PT. Nikawan Solusindo Sejahtera/ CS 1: 0822 4980 4379, CS 2: 0812 9310 1282, email: finance@nikawan-solusindo.com</div>`;
             }
-            // FORMAT BAST (Sesuai BAST Aica Indria)
             else if (stage.id === 'bast_report') {
                 docContent = `
                     <div class="doc-header keep-together">
@@ -928,8 +1062,8 @@
                     </ol>
                     <p style="margin-bottom:15px;">Dengan ini menyatakan sebagai berikut:</p>
                     <ol style="margin-bottom:20px; font-size:9pt; line-height:1.4;">
-                        <li style="margin-bottom:10px;">PIHAK KEDUA menyerahkan pekerjaan berupa ${proj.description} ke PIHAK PERTAMA sesuai dengan perjanjian pekerjaan dengan nomer PO: ${proj.po_number || '-'} di ${proj.customers.name}.</li>
-                        <li style="margin-bottom:10px;">PIHAK PERTAMA telah melaksanakan dan menyelasaikan pekerjaan berupa ${proj.description} ke PIHAK PERTAMA sesuai dengan perjanjian pekerjaan dengan nomer PO: ${proj.po_number || '-'} di ${proj.customers.name} dengan hasil baik dan sesuai.</li>
+                        <li style="margin-bottom:10px;">PIHAK KEDUA menyerahkan pekerjaan berupa ${items.map(i=>i.desc).join(', ')} ke PIHAK PERTAMA sesuai dengan perjanjian pekerjaan dengan nomer PO: ${proj.po_number || '-'} di ${proj.customers.name}.</li>
+                        <li style="margin-bottom:10px;">PIHAK PERTAMA telah melaksanakan dan menyelasaikan pekerjaan berupa ${items.map(i=>i.desc).join(', ')} ke PIHAK PERTAMA sesuai dengan perjanjian pekerjaan dengan nomer PO: ${proj.po_number || '-'} di ${proj.customers.name} dengan hasil baik dan sesuai.</li>
                         <li style="margin-bottom:10px;">PIHAK KEDUA telah menerima seluruh hasil pekerjaan yang dilaksanakan oleh PIHAK PERTAMA.</li>
                     </ol>
                     <p style="margin-bottom:30px; text-align:justify;">Demikian Berita Acara Serah Terima Pekerjaan ini dibuat dengan sebenarnya dan ditandatangani oleh PIHAK PERTAMA dan PIHAK KEDUA pada hari ini dan tanggal tersebut diatas, untuk dipergunakan sebagaimana mestinya.</p>
@@ -938,23 +1072,7 @@
                         <div class="bast-party"><p><strong>PIHAK PERTAMA,</strong><br>Yang Menyerahkan,</p><div class="signature-line">${sigTag}</div><p style="font-weight:bold;">( Hermawan Susanto )</p><p>PT. Nikawan Solusindo Sejahtera</p></div>
                     </div>`;
             } else {
-                // Fallback template
-                docContent = `
-                    <div class="doc-header keep-together">
-                        <div class="doc-header-left">
-                            <h1>PT. NIKAWAN SOLUSINDO SEJAHTERA</h1>
-                            <p>Puri Flamingo Blok FLA 5 No. 19, RT 08, RW 11 Kel. Sukamantri, Kec. Pasar Kemis, Kab. Tangerang, Banten 15560</p>
-                        </div>
-                        ${logoTag}
-                    </div>
-                    <div style="text-align:center; margin: 40px 0;"><h2 style="font-size:14pt; font-weight:bold;">DOKUMEN RESMI</h2><p>${stage.name}</p></div>
-                    <p style="text-align:center;">Nomor Proyek: ${proj.project_number}<br>Tanggal: ${today}</p>
-                    <div style="margin-top:100px; text-align:right;">
-                        <p>Mengetahui,</p>
-                        <div style="height:60px;">${sigTag}</div>
-                        <p style="font-weight:bold;">( Hermawan Susanto )</p>
-                        <p>Direktur Utama</p>
-                    </div>`;
+                docContent = `<p style="text-align:center; padding:50px;">Template untuk tahap ${stage.name} belum tersedia.</p>`;
             }
 
             document.getElementById('printArea').innerHTML = docContent;
