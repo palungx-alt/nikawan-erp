@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIKAWAN ERP V26 - Professional Documents</title>
+    <title>NIKAWAN ERP V27 - Fixed Storage Upload</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -100,10 +100,10 @@
         .items-table input { width: 100%; padding: 6px; border: 1px solid transparent; background: transparent; font-size: 12px; }
         .items-table input:focus { border-color: var(--nikawan-blue); background: white; outline: none; border-radius: 4px; }
 
-        /* --- PRINT STYLES PROFESSIONAL & RAPI --- */
+        /* --- PRINT STYLES EXACT MATCH --- */
         #printArea { display: none; }
         @media print {
-            @page { size: A4; margin: 15mm 20mm; } /* Margin standar dokumen bisnis */
+            @page { size: A4; margin: 15mm 20mm; }
             body * { visibility: hidden; }
             #printArea, #printArea * { visibility: visible; }
             
@@ -137,7 +137,6 @@
             .bold { font-weight: bold; }
             .uppercase { text-transform: uppercase; }
             
-            /* Hilangkan elemen UI lain saat print */
             .no-print { display: none !important; }
         }
     </style>
@@ -753,7 +752,7 @@
             }
         }
 
-        // --- FIXED UPLOAD LOGIC ---
+        // --- FIXED UPLOAD LOGIC FOR STORAGE POLICY ---
         async function handleUploadFile() {
             const file = document.getElementById('upFile').files[0];
             const docType = document.getElementById('upDocType').value;
@@ -763,9 +762,16 @@
             try {
                 const fileName = `${currentProjectId}/${Date.now()}_${file.name}`;
                 
-                // 1. Upload to Storage
-                const { data: storageData, error: uploadErr } = await sb.storage.from('documents').upload(fileName, file);
-                if(uploadErr) throw new Error('Gagal upload ke storage: ' + uploadErr.message);
+                // 1. Upload to Storage with upsert option to avoid conflicts
+                const { data: storageData, error: uploadErr } = await sb.storage
+                    .from('documents')
+                    .upload(fileName, file, { upsert: true }); 
+                    
+                if(uploadErr) {
+                    console.error('Storage Error:', uploadErr);
+                    // Jika error storage, cek apakah bucket 'documents' sudah dibuat dan policy INSERT sudah ada
+                    throw new Error('Gagal upload ke storage: ' + uploadErr.message + '. Pastikan bucket "documents" ada dan policy INSERT aktif.');
+                }
                 
                 // 2. Get Public URL
                 const { data: urlData } = sb.storage.from('documents').getPublicUrl(fileName);
@@ -778,28 +784,16 @@
                     docNum = seqData; 
                 }
 
-                // 4. Save to Database with Retry Logic for RLS
-                let dbSuccess = false;
-                let attempts = 0;
-                while(!dbSuccess && attempts < 3) {
-                    const { error: dbErr } = await sb.from('documents').insert({ 
-                        project_id: currentProjectId, 
-                        doc_type: docType, 
-                        doc_number: docNum, 
-                        drive_file_id: fileName, 
-                        drive_url: urlData.publicUrl 
-                    });
-                    
-                    if(dbErr) {
-                        console.warn(`Attempt ${attempts+1} failed:`, dbErr);
-                        attempts++;
-                        await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
-                    } else {
-                        dbSuccess = true;
-                    }
-                }
+                // 4. Save to Database
+                const { error: dbErr } = await sb.from('documents').insert({ 
+                    project_id: currentProjectId, 
+                    doc_type: docType, 
+                    doc_number: docNum, 
+                    drive_file_id: fileName, 
+                    drive_url: urlData.publicUrl 
+                });
 
-                if(!dbSuccess) throw new Error('Gagal simpan data ke database setelah 3x percobaan. Cek RLS Policy.');
+                if(dbErr) throw new Error('Gagal simpan data ke database: ' + dbErr.message);
 
                 alert('Dokumen berhasil diupload!'); 
                 closeModal('uploadModal'); 
@@ -821,7 +815,7 @@
             if(error) alert('Gagal: ' + error.message); else { alert('User berhasil ditambahkan'); closeModal('userModal'); }
         }
 
-        // --- TEMPLATE GENERATOR (EXACT WORDS + DYNAMIC ITEMS + RAPI) ---
+        // --- TEMPLATE GENERATOR (EXACT MATCH DENGAN CONTOH DOKUMEN) ---
         async function generateTemplate() {
             if(!currentProjectId) return alert('Tidak ada proyek aktif');
             showLoading(true);
