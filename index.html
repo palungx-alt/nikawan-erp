@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIKAWAN ERP V20 - Fixed Syntax & Exact Format</title>
+    <title>NIKAWAN ERP V21 - Fixed Print & Upload</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -295,7 +295,6 @@
 
             showLoading(true);
             try {
-                // Coba RPC dulu, kalau gagal coba query langsung (fallback)
                 let userData = null;
                 try {
                     const { data: isValid, error: authErr } = await sb.rpc('verify_user', { p_username: username, p_password: password });
@@ -303,9 +302,7 @@
                         const { data: uData } = await sb.from('users').select('*').eq('username', username).single();
                         userData = uData;
                     }
-                } catch (rpcErr) {
-                    console.log('RPC fallback to direct query');
-                }
+                } catch (rpcErr) { console.log('RPC fallback'); }
 
                 if (!userData) {
                     const { data: uData, error: userErr } = await sb.from('users').select('*').eq('username', username).single();
@@ -320,12 +317,8 @@
                 document.getElementById('userDisplay').innerText = currentUser.full_name;
                 applyBranding();
                 navigate('clients');
-            } catch (err) { 
-                errorEl.innerText = err.message; 
-                errorEl.style.display = 'block'; 
-            } finally { 
-                showLoading(false); 
-            }
+            } catch (err) { errorEl.innerText = err.message; errorEl.style.display = 'block'; } 
+            finally { showLoading(false); }
         }
 
         function logout() { if(confirm('Yakin ingin keluar?')) { localStorage.removeItem('nikawan_user'); location.reload(); } }
@@ -628,7 +621,11 @@
             const today = new Date().toLocaleDateString('id-ID', { year:'numeric', month:'long', day:'numeric' });
             const logoTag = companyLogo ? `<img src="${companyLogo}">` : '';
             const sigTag = companySignature ? `<img src="${companySignature}" style="max-height:40px;">` : '<div style="height:40px;"></div>';
+            
+            // PERBAIKAN: Cari stage dengan aman
             const stage = STAGES.find(s => s.id === proj.current_stage);
+            if (!stage) return alert('Tahap proyek tidak dikenali. Silakan refresh halaman.');
+
             let docContent = '';
 
             if (stage.id === 'pembuatan_penawaran' || stage.id === 'kirim_email') {
