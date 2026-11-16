@@ -3,107 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIKAWAN ERP V29 - Professional Form & Print</title>
+    <title>NIKAWAN ERP V30 - Futuristic Multi-Project</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --nikawan-blue: #0A2342; --nikawan-blue-light: #1C3F6E;
-            --bg-main: #F1F5F9; --bg-card: #FFFFFF; --text-main: #1E293B;
-            --text-muted: #64748B; --border: #E2E8F0; --success: #10B981;
-            --warning: #F59E0B; --danger: #EF4444; --radius: 16px;
+            --nikawan-blue: #0A2342; 
+            --nikawan-accent: #3B82F6;
+            --bg-main: #0F172A; 
+            --bg-card: rgba(30, 41, 59, 0.7); 
+            --text-main: #F1F5F9;
+            --text-muted: #94A3B8; 
+            --border: rgba(255, 255, 255, 0.1); 
+            --success: #10B981;
+            --warning: #F59E0B; 
+            --danger: #EF4444; 
+            --radius: 20px;
+            --glass: blur(12px);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { background: var(--bg-main); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+        body { background-color: var(--bg-main); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; background-image: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 40%); }
         
         /* Sidebar & Layout */
-        .sidebar { width: 280px; background: var(--bg-card); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; }
+        .sidebar { width: 280px; background: var(--bg-card); backdrop-filter: var(--glass); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; }
         .brand-container { padding: 30px 20px; text-align: center; border-bottom: 1px solid var(--border); }
-        .app-logo { max-width: 160px; max-height: 80px; width: auto; height: auto; object-fit: contain; margin-bottom: 15px; filter: drop-shadow(0 4px 6px rgba(10,35,66,0.1)); }
-        .brand-text { font-size: 12px; font-weight: 700; color: var(--nikawan-blue); letter-spacing: 2px; text-transform: uppercase; }
+        .app-logo { max-width: 160px; max-height: 80px; width: auto; height: auto; object-fit: contain; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.3)); transition: transform 0.3s ease; }
+        .app-logo:hover { transform: scale(1.05); }
+        .brand-text { font-size: 12px; font-weight: 700; color: var(--nikawan-accent); letter-spacing: 2px; text-transform: uppercase; }
         .nav-menu { flex: 1; padding-top: 20px; overflow-y: auto; }
-        .nav-item { display: flex; align-items: center; gap: 15px; padding: 16px 25px; color: var(--text-muted); cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.2s; border-left: 4px solid transparent; margin: 4px 0; }
-        .nav-item:hover { background: #F8FAFC; color: var(--nikawan-blue); }
-        .nav-item.active { background: #EFF6FF; color: var(--nikawan-blue); border-left-color: var(--nikawan-blue); font-weight: 600; }
+        .nav-item { display: flex; align-items: center; gap: 15px; padding: 16px 25px; color: var(--text-muted); cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.2s; border-left: 4px solid transparent; margin: 4px 0; border-radius: 0 10px 10px 0; }
+        .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
+        .nav-item.active { background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, transparent 100%); color: var(--nikawan-accent); border-left-color: var(--nikawan-accent); font-weight: 600; }
         
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        .header { height: 70px; background: var(--bg-card); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 30px; justify-content: space-between; }
+        .header { height: 70px; background: var(--bg-card); backdrop-filter: var(--glass); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 30px; justify-content: space-between; }
         .page-container { padding: 30px; overflow-y: auto; flex: 1; }
 
         /* Login Screen */
-        .login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, var(--bg-main), #E2E8F0); z-index: 2000; display: flex; align-items: center; justify-content: center; }
-        .login-box { background: var(--bg-card); padding: 50px 40px; border-radius: 24px; width: 420px; box-shadow: 0 20px 40px rgba(10,35,66,0.1); border: 1px solid var(--border); text-align: center; }
-        .login-logo { max-width: 220px; max-height: 100px; width: auto; height: auto; object-fit: contain; margin-bottom: 30px; }
-        .login-input { width: 100%; padding: 14px; background: #F8FAFC; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; outline: none; font-size: 14px; }
-        .login-input:focus { border-color: var(--nikawan-blue); background: white; }
-        .login-btn { width: 100%; padding: 14px; background: var(--nikawan-blue); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; transition: 0.2s; }
-        .login-btn:hover { background: var(--nikawan-blue-light); transform: translateY(-2px); }
-        .login-error { color: var(--danger); font-size: 12px; margin-top: 15px; display: none; background: #FEF2F2; padding: 8px; border-radius: 8px; }
+        .login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-main); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: var(--bg-card); backdrop-filter: var(--glass); padding: 50px 40px; border-radius: 24px; width: 420px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); border: 1px solid var(--border); text-align: center; }
+        .login-logo { max-width: 220px; max-height: 100px; width: auto; height: auto; object-fit: contain; margin-bottom: 30px; filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.4)); }
+        .login-input { width: 100%; padding: 14px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; outline: none; font-size: 14px; color: white; transition: 0.3s; }
+        .login-input:focus { border-color: var(--nikawan-accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+        .login-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--nikawan-accent), #2563EB); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; transition: 0.3s; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
+        .login-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4); }
+        .login-error { color: var(--danger); font-size: 12px; margin-top: 15px; display: none; background: rgba(239, 68, 68, 0.1); padding: 8px; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2); }
 
         /* Components */
         .client-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
         .search-box { position: relative; flex: 1; max-width: 400px; }
         .search-box i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
-        .search-box input { width: 100%; padding: 12px 15px 12px 40px; background: white; border: 1px solid var(--border); border-radius: 12px; outline: none; font-size: 14px; }
-        .search-box input:focus { border-color: var(--nikawan-blue); box-shadow: 0 0 0 3px rgba(10,35,66,0.1); }
+        .search-box input { width: 100%; padding: 12px 15px 12px 40px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 12px; outline: none; font-size: 14px; color: white; }
+        .search-box input:focus { border-color: var(--nikawan-accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
         
         .filter-group { display: flex; align-items: center; gap: 10px; }
         .filter-label { font-size: 13px; color: var(--text-muted); font-weight: 600; }
-        .filter-select { padding: 10px 15px; background: white; border: 1px solid var(--border); border-radius: 12px; outline: none; font-size: 13px; cursor: pointer; }
-        .filter-select:focus { border-color: var(--nikawan-blue); }
+        .filter-select { padding: 10px 15px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 12px; outline: none; font-size: 13px; cursor: pointer; color: white; }
+        .filter-select:focus { border-color: var(--nikawan-accent); }
 
         .client-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .client-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; cursor: pointer; transition: 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position: relative; }
-        .client-card:hover { transform: translateY(-5px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .client-card.selected { background: #F0F5FF; box-shadow: 0 0 0 2px rgba(10,35,66,0.1); }
+        .client-card { background: var(--bg-card); backdrop-filter: var(--glass); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; overflow: hidden; }
+        .client-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 100%); opacity: 0; transition: 0.3s; }
+        .client-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.2); border-color: var(--nikawan-accent); }
+        .client-card:hover::before { opacity: 1; }
+        .client-card.selected { background: rgba(59, 130, 246, 0.1); border-color: var(--nikawan-accent); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); }
         
         /* INDIKATOR WARNA PROSES TANPA KLIK */
-        .client-card.status-active { border-left: 5px solid var(--nikawan-blue); }
+        .client-card.status-active { border-left: 5px solid var(--nikawan-accent); }
         .client-card.status-completed { border-left: 5px solid var(--success); }
         .client-card.status-pending { border-left: 5px solid var(--warning); }
 
-        .client-name { font-size: 18px; font-weight: 700; margin-bottom: 6px; color: var(--nikawan-blue); }
+        .client-name { font-size: 18px; font-weight: 700; margin-bottom: 6px; color: white; }
         .client-pic { font-size: 13px; color: var(--text-muted); margin-bottom: 15px; }
-        .status-badge { position: absolute; top: 20px; right: 20px; font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 20px; text-transform: uppercase; }
-        .badge-active { background: #EFF6FF; color: var(--nikawan-blue); }
-        .badge-completed { background: #ECFDF5; color: var(--success); }
-        .badge-pending { background: #FFFBEB; color: var(--warning); }
+        .status-badge { position: absolute; top: 20px; right: 20px; font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 20px; text-transform: uppercase; background: rgba(255,255,255,0.1); }
+        .badge-active { color: var(--nikawan-accent); background: rgba(59, 130, 246, 0.1); }
+        .badge-completed { color: var(--success); background: rgba(16, 185, 129, 0.1); }
+        .badge-pending { color: var(--warning); background: rgba(245, 158, 11, 0.1); }
         
         .btn { padding: 10px 20px; border-radius: 10px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; }
-        .btn-primary { background: var(--nikawan-blue); color: white; }
-        .btn-primary:hover { background: var(--nikawan-blue-light); }
+        .btn-primary { background: linear-gradient(135deg, var(--nikawan-accent), #2563EB); color: white; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4); }
         .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { background: rgba(255,255,255,0.05); border-color: var(--text-muted); }
         .btn-danger { background: var(--danger); color: white; }
         .btn-sm { padding: 6px 12px; font-size: 12px; }
         .btn-xs { padding: 4px 8px; font-size: 11px; }
 
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10,35,66,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
-        .modal-box { background: var(--bg-card); width: 700px; max-width: 95%; max-height: 90vh; border-radius: 20px; border: 1px solid var(--border); display: flex; flex-direction: column; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-box { background: #1E293B; width: 700px; max-width: 95%; max-height: 90vh; border-radius: 20px; border: 1px solid var(--border); display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
         .modal-header { padding: 24px 30px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .modal-body { padding: 30px; overflow-y: auto; flex: 1; }
-        .modal-footer { padding: 20px 30px; border-top: 1px solid var(--border); text-align: right; background: #F8FAFC; border-radius: 0 0 20px 20px; }
+        .modal-footer { padding: 20px 30px; border-top: 1px solid var(--border); text-align: right; background: rgba(15, 23, 42, 0.5); border-radius: 0 0 20px 20px; }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted); font-weight: 600; }
-        .form-control { width: 100%; padding: 12px; background: #F8FAFC; border: 1px solid var(--border); color: var(--text-main); border-radius: 10px; outline: none; font-size: 14px; }
-        .form-control:focus { border-color: var(--nikawan-blue); background: white; }
-        .preview-img { max-height: 80px; margin-top: 15px; display: none; border-radius: 12px; border: 1px solid var(--border); }
-
-        .loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(241,245,249,0.9); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }
-        .spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--nikawan-blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .form-control { width: 100%; padding: 12px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); color: var(--text-main); border-radius: 10px; outline: none; font-size: 14px; }
+        .form-control:focus { border-color: var(--nikawan-accent); background: rgba(15, 23, 42, 0.8); }
+        
+        .loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }
+        .spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--nikawan-accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Dynamic Items Table in Modal */
         .items-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 12px; }
-        .items-table th { background: #F1F5F9; padding: 8px; text-align: left; font-weight: 600; color: var(--text-muted); border: 1px solid var(--border); }
+        .items-table th { background: rgba(255,255,255,0.05); padding: 8px; text-align: left; font-weight: 600; color: var(--text-muted); border: 1px solid var(--border); }
         .items-table td { padding: 8px; border: 1px solid var(--border); }
-        .items-table input { width: 100%; padding: 6px; border: 1px solid transparent; background: transparent; font-size: 12px; }
-        .items-table input:focus { border-color: var(--nikawan-blue); background: white; outline: none; border-radius: 4px; }
+        .items-table input { width: 100%; padding: 6px; border: 1px solid transparent; background: transparent; font-size: 12px; color: white; }
+        .items-table input:focus { border-color: var(--nikawan-accent); background: rgba(15, 23, 42, 0.6); outline: none; border-radius: 4px; }
 
-        /* --- PRINT STYLES PROFESSIONAL & RAPI --- */
+        /* Project List Styling */
+        .project-list { margin-top: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .project-item { background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
+        .project-item:hover { background: rgba(59, 130, 246, 0.1); border-color: var(--nikawan-accent); }
+        .project-item.active { background: rgba(59, 130, 246, 0.15); border-color: var(--nikawan-accent); }
+
+        /* --- PRINT STYLES EXACT MATCH --- */
         #printArea { display: none; }
         @media print {
-            @page { size: A4; margin: 15mm 20mm; } /* Margin standar dokumen bisnis */
+            @page { size: A4; margin: 15mm 20mm; }
             body * { visibility: hidden; }
             #printArea, #printArea * { visibility: visible; }
             
@@ -137,7 +154,6 @@
             .bold { font-weight: bold; }
             .uppercase { text-transform: uppercase; }
             
-            /* Hilangkan elemen UI lain saat print */
             .no-print { display: none !important; }
         }
     </style>
@@ -148,20 +164,13 @@
     <div id="loginScreen" class="login-screen">
         <div class="login-box">
             <img id="loginLogoImg" src="" alt="Logo" class="login-logo" style="display:none;">
-            <div id="loginLogoText" style="font-size: 24px; font-weight: 800; color: var(--nikawan-blue); margin-bottom: 10px;">NIKAWAN</div>
+            <div id="loginLogoText" style="font-size: 24px; font-weight: 800; color: var(--nikawan-accent); margin-bottom: 10px;">NIKAWAN</div>
             <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 30px; letter-spacing: 2px;">INTEGRATED MANAGEMENT SYSTEM</div>
             
             <input type="text" id="loginUser" class="login-input" placeholder="Username / Email">
             <input type="password" id="loginPass" class="login-input" placeholder="Password">
             <button class="login-btn" onclick="handleLogin()">MASUK SISTEM</button>
             <div id="loginError" class="login-error"></div>
-            
-            <div style="margin-top: 30px; border-top: 1px solid var(--border); padding-top: 20px;">
-                <label style="font-size: 11px; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
-                    <i class="fas fa-image"></i> Upload Logo Lokal
-                    <input type="file" id="localLogoUpload" accept="image/*" style="display: none;" onchange="handleLocalLogoUpload(this)">
-                </label>
-            </div>
         </div>
     </div>
 
@@ -173,7 +182,6 @@
         </div>
         <nav class="nav-menu">
             <a onclick="navigate('clients')" id="nav-clients" class="nav-item active"><i class="fas fa-users"></i> Daftar Client</a>
-            <a onclick="openSettingsModal()" class="nav-item"><i class="fas fa-cog"></i> Pengaturan Brand</a>
             <a onclick="openUserModal()" class="nav-item"><i class="fas fa-user-plus"></i> Manajemen User</a>
             <a onclick="logout()" class="nav-item"><i class="fas fa-sign-out-alt"></i> Keluar</a>
         </nav>
@@ -182,7 +190,7 @@
     <!-- MAIN CONTENT -->
     <main class="main-content">
         <header class="header">
-            <h3 id="pageTitle" style="font-weight: 700; color: var(--nikawan-blue);">Daftar Client</h3>
+            <h3 id="pageTitle" style="font-weight: 700; color: white;">Daftar Client</h3>
             <span id="userDisplay" style="font-size:12px; color:var(--text-muted); font-weight: 600;"></span>
         </header>
         <div id="appContent" class="page-container"></div>
@@ -190,20 +198,9 @@
     </main>
 
     <!-- MODALS -->
-    <div id="settingsModal" class="modal-overlay">
-        <div class="modal-box">
-            <div class="modal-header"><h3 style="color: var(--nikawan-blue);">Pengaturan Brand & TTD</h3><button onclick="closeModal('settingsModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
-            <div class="modal-body">
-                <div class="form-group"><label>Logo Perusahaan</label><input type="file" id="setLogo" class="form-control" accept="image/*" onchange="previewImage(this,'logoPreview')"><img id="logoPreview" class="preview-img"></div>
-                <div class="form-group"><label>Tanda Tangan Digital</label><input type="file" id="setSig" class="form-control" accept="image/png" onchange="previewImage(this,'sigPreview')"><img id="sigPreview" class="preview-img"></div>
-            </div>
-            <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('settingsModal')">Batal</button><button class="btn btn-primary" onclick="saveBranding()"><i class="fas fa-save"></i> Simpan</button></div>
-        </div>
-    </div>
-
     <div id="userModal" class="modal-overlay">
         <div class="modal-box">
-            <div class="modal-header"><h3 style="color: var(--nikawan-blue);">Tambah User Baru</h3><button onclick="closeModal('userModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
+            <div class="modal-header"><h3 style="color: var(--nikawan-accent);">Tambah User Baru</h3><button onclick="closeModal('userModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
             <div class="modal-body">
                 <div class="form-group"><label>Username</label><input id="newUsername" class="form-control"></div>
                 <div class="form-group"><label>Password</label><input type="password" id="newPassword" class="form-control"></div>
@@ -217,9 +214,9 @@
     <!-- MODAL FORM PROYEK BARU DENGAN INPUT ITEM DINAMIS -->
     <div id="projectModal" class="modal-overlay">
         <div class="modal-box">
-            <div class="modal-header"><h3 style="color: var(--nikawan-blue);">Mulai Proyek / Penawaran Baru</h3><button onclick="closeModal('projectModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
+            <div class="modal-header"><h3 style="color: var(--nikawan-accent);">Mulai Proyek / Penawaran Baru</h3><button onclick="closeModal('projectModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
             <div class="modal-body">
-                <div class="form-group"><label>Nomor Proyek/Penawaran (Otomatis)</label><input id="projNumber" class="form-control" readonly style="background:#e2e8f0; color:#64748b; cursor:not-allowed;"></div>
+                <div class="form-group"><label>Nomor Proyek/Penawaran (Otomatis)</label><input id="projNumber" class="form-control" readonly style="background:rgba(255,255,255,0.05); color:#64748b; cursor:not-allowed;"></div>
                 
                 <div style="margin-bottom: 15px;">
                     <label style="font-size: 13px; color: var(--text-muted); font-weight: 600; display:block; margin-bottom:8px;">Detail Item Penawaran</label>
@@ -250,7 +247,7 @@
     <!-- MODAL UPLOAD DOKUMEN -->
     <div id="uploadModal" class="modal-overlay">
         <div class="modal-box">
-            <div class="modal-header"><h3 style="color: var(--nikawan-blue);">Upload Dokumen Client</h3><button onclick="closeModal('uploadModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
+            <div class="modal-header"><h3 style="color: var(--nikawan-accent);">Upload Dokumen Client</h3><button onclick="closeModal('uploadModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
             <div class="modal-body">
                 <div class="form-group"><label>Jenis Dokumen</label><select id="upDocType" class="form-control"><option value="PO Client">PO Client</option><option value="Kontrak">Kontrak</option><option value="SPK">SPK</option></select></div>
                 <div class="form-group"><label>Nomor Dokumen</label><input id="upDocNumber" class="form-control" placeholder="Auto-generated jika kosong"></div>
@@ -264,11 +261,11 @@
     <div id="stageCommentModal" class="modal-overlay">
         <div class="modal-box" style="width: 500px;">
             <div class="modal-header">
-                <h3 id="stageCommentTitle" style="color: var(--nikawan-blue);">Catatan Tahapan</h3>
+                <h3 id="stageCommentTitle" style="color: var(--nikawan-accent);">Catatan Tahapan</h3>
                 <button onclick="closeModal('stageCommentModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body">
-                <div id="stageCommentList" style="max-height: 200px; overflow-y: auto; margin-bottom: 20px; background: #F8FAFC; padding: 15px; border-radius: 12px; border: 1px solid var(--border);"></div>
+                <div id="stageCommentList" style="max-height: 200px; overflow-y: auto; margin-bottom: 20px; background: rgba(15, 23, 42, 0.6); padding: 15px; border-radius: 12px; border: 1px solid var(--border);"></div>
                 <div class="form-group" style="margin-bottom:0;">
                     <label>Tambah Catatan Baru</label>
                     <textarea id="newStageComment" class="form-control" rows="3" placeholder="Tulis catatan untuk tahapan ini..."></textarea>
@@ -284,7 +281,7 @@
     <!-- MODAL HISTORI TAHAPAN -->
     <div id="historyModal" class="modal-overlay">
         <div class="modal-box">
-            <div class="modal-header"><h3 id="historyTitle" style="color: var(--nikawan-blue);">Detail Tahapan</h3><button onclick="closeModal('historyModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
+            <div class="modal-header"><h3 id="historyTitle" style="color: var(--nikawan-accent);">Detail Tahapan</h3><button onclick="closeModal('historyModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
             <div id="historyBody" class="modal-body"></div>
             <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('historyModal')">Tutup</button></div>
         </div>
@@ -292,7 +289,7 @@
 
     <div id="modal" class="modal-overlay">
         <div class="modal-box">
-            <div class="modal-header"><h3 id="modalTitle" style="color: var(--nikawan-blue);">Judul</h3><button onclick="closeModal('modal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
+            <div class="modal-header"><h3 id="modalTitle" style="color: var(--nikawan-accent);">Judul</h3><button onclick="closeModal('modal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
             <div id="modalBody" class="modal-body"></div>
             <div id="modalFooter" class="modal-footer"></div>
         </div>
@@ -316,8 +313,8 @@
         } catch(e) { console.error(e); alert('Gagal memuat library Supabase.'); }
 
         let currentUser = null;
-        let companyLogo = localStorage.getItem('nikawan_logo') || '';
-        let companySignature = localStorage.getItem('nikawan_sig') || '';
+        let companyLogo = 'logo.png'; // Default path local
+        let companySignature = 'signature.png'; // Default path local
         let selectedClientId = null;
         let currentProjectId = null;
         let tempClientIdForProject = null;
@@ -384,44 +381,20 @@
         function logout() { if(confirm('Yakin ingin keluar?')) { localStorage.removeItem('nikawan_user'); location.reload(); } }
 
         // ==========================================
-        // BRANDING & LOCAL LOGO
+        // BRANDING & LOCAL LOGO (AUTO LOAD FROM FOLDER)
         // ==========================================
-        function handleLocalLogoUpload(input) {
-            const file = input.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => { companyLogo = e.target.result; localStorage.setItem('nikawan_logo', companyLogo); updateLogoUI(companyLogo); };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function updateLogoUI(src) {
-            if(!src) return;
-            document.getElementById('loginLogoImg').src = src; document.getElementById('loginLogoImg').style.display = 'block'; document.getElementById('loginLogoText').style.display = 'none';
-            document.getElementById('sidebarLogo').src = src; document.getElementById('sidebarLogo').style.display = 'block'; document.getElementById('sidebarBrandText').style.display = 'none';
-        }
-
-        function applyBranding() { if(companyLogo) updateLogoUI(companyLogo); else updateLogoUI('/nikawan-erp/logo.png'); }
-
-        async function saveBranding() {
-            const logoInput = document.getElementById('setLogo');
-            const sigInput = document.getElementById('setSig');
-            
-            if (logoInput.files[0]) {
-                const r = await new Promise(res => { const rd = new FileReader(); rd.onload = e => res(e.target.result); rd.readAsDataURL(logoInput.files[0]); });
-                companyLogo = r; localStorage.setItem('nikawan_logo', r);
-                await sb.from('settings').upsert({ key: 'logo_base64', value: r });
-            }
-            if (sigInput.files[0]) {
-                const r = await new Promise(res => { const rd = new FileReader(); rd.onload = e => res(e.target.result); rd.readAsDataURL(sigInput.files[0]); });
-                companySignature = r; localStorage.setItem('nikawan_sig', r);
-                await sb.from('settings').upsert({ key: 'signature_base64', value: r });
-            }
-            updateLogoUI(companyLogo); alert('Brand berhasil disimpan!'); closeModal('settingsModal');
-        }
-
-        function previewImage(input, id) {
-            if(input.files[0]) { const r = new FileReader(); r.onload = e => { document.getElementById(id).src = e.target.result; document.getElementById(id).style.display = 'block'; }; r.readAsDataURL(input.files[0]); }
+        function applyBranding() { 
+            // Cek apakah file logo ada di folder yang sama
+            fetch('logo.png').then(r => {
+                if(r.ok) {
+                    document.getElementById('loginLogoImg').src = 'logo.png'; 
+                    document.getElementById('loginLogoImg').style.display = 'block'; 
+                    document.getElementById('loginLogoText').style.display = 'none';
+                    document.getElementById('sidebarLogo').src = 'logo.png'; 
+                    document.getElementById('sidebarLogo').style.display = 'block'; 
+                    document.getElementById('sidebarBrandText').style.display = 'none';
+                }
+            }).catch(() => console.log('Logo tidak ditemukan di folder lokal'));
         }
 
         // ==========================================
@@ -515,18 +488,20 @@
             const activeCard = document.getElementById(`card-${clientId}`);
             if(activeCard) activeCard.classList.add('selected');
 
-            const { data: proj } = await sb.from('projects').select('*').eq('customer_id', clientId).single();
-            currentProjectId = proj?.id;
-
+            // Ambil SEMUA proyek untuk client ini (Multi-Project Support)
+            const { data: projects } = await sb.from('projects').select('*').eq('customer_id', clientId).order('created_at', {ascending: false});
+            
+            // Update warna kartu berdasarkan proyek terakhir
             if (activeCard) {
                 activeCard.classList.remove('status-pending', 'status-active', 'status-completed');
                 activeCard.querySelector('.status-badge')?.remove();
                 
-                if (!proj) {
+                if (!projects || projects.length === 0) {
                     activeCard.classList.add('status-pending');
                     activeCard.innerHTML += `<span class="status-badge badge-pending">Baru</span>`;
                 } else {
-                    const stageIdx = STAGES.findIndex(s => s.id === proj.current_stage);
+                    const lastProj = projects[0];
+                    const stageIdx = STAGES.findIndex(s => s.id === lastProj.current_stage);
                     if (stageIdx === STAGES.length - 1) {
                         activeCard.classList.add('status-completed');
                         activeCard.innerHTML += `<span class="status-badge badge-completed">Selesai</span>`;
@@ -537,18 +512,15 @@
                 }
             }
 
-            let docs = [];
-            if(proj?.id) { const { data: docData } = await sb.from('documents').select('*').eq('project_id', proj.id); docs = docData || []; }
-
             showLoading(false);
             const area = document.getElementById('workflowArea');
             area.style.display = 'block';
 
-            if(!proj) {
+            if(!projects || projects.length === 0) {
                 area.innerHTML = `
-                    <div style="text-align:center; padding:60px; background:white; border-radius:16px; border:1px solid var(--border); margin-top:20px; animation: slideUp 0.4s ease;">
+                    <div style="text-align:center; padding:60px; background:var(--bg-card); backdrop-filter:var(--glass); border-radius:16px; border:1px solid var(--border); margin-top:20px; animation: slideUp 0.4s ease;">
                         <i class="fas fa-folder-open" style="font-size:48px; color:var(--text-muted); margin-bottom:20px; opacity:0.5;"></i>
-                        <h3 style="margin-bottom:10px; color:var(--text-main);">Belum Ada Proyek Aktif</h3>
+                        <h3 style="margin-bottom:10px; color:white;">Belum Ada Proyek Aktif</h3>
                         <p style="color:var(--text-muted); margin-bottom:25px;">Mulai alur kerja untuk client ini dengan membuat proyek pertama.</p>
                         <button class="btn btn-primary" onclick="openProjectModal('${clientId}')"><i class="fas fa-plus"></i> Mulai Proyek Baru</button>
                     </div>`;
@@ -556,19 +528,63 @@
                 return;
             }
 
+            // Render List Proyek (Multi-Project Selection)
+            let projectListHtml = projects.map(p => {
+                const isActive = currentProjectId === p.id;
+                const stageName = STAGES.find(s => s.id === p.current_stage)?.name || p.current_stage;
+                return `
+                <div class="project-item ${isActive ? 'active' : ''}" onclick="loadProjectDetail('${p.id}', '${clientId}')">
+                    <div>
+                        <div style="font-weight:bold; color:white; margin-bottom:4px;">${p.project_number}</div>
+                        <div style="font-size:12px; color:var(--text-muted);">${stageName} | Rp ${p.value.toLocaleString()}</div>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color:var(--nikawan-accent);"></i>
+                </div>`;
+            }).join('');
+
+            area.innerHTML = `
+                <div style="background:var(--bg-card); backdrop-filter:var(--glass); padding:30px; border-radius:16px; border:1px solid var(--border); margin-top:20px; animation: slideUp 0.4s ease;">
+                    <h3 style="color:white; margin-bottom:20px; display:flex; align-items:center; gap:10px;"><i class="fas fa-layer-group" style="color:var(--nikawan-accent);"></i> Daftar Proyek Client</h3>
+                    <div class="project-list">
+                        ${projectListHtml}
+                    </div>
+                    <div style="margin-top:20px; text-align:right;">
+                        <button class="btn btn-primary btn-sm" onclick="openProjectModal('${clientId}')"><i class="fas fa-plus"></i> Tambah Proyek Baru</button>
+                    </div>
+                </div>
+                <div id="projectDetailView" style="display:none;"></div>
+            `;
+            area.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function loadProjectDetail(projId, clientId) {
+            currentProjectId = projId;
+            selectedClientId = clientId;
+            
+            // Highlight active project
+            document.querySelectorAll('.project-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            const { data: proj } = await sb.from('projects').select('*').eq('id', projId).single();
+            let docs = [];
+            if(proj?.id) { const { data: docData } = await sb.from('documents').select('*').eq('project_id', proj.id); docs = docData || []; }
+
+            const detailView = document.getElementById('projectDetailView');
+            detailView.style.display = 'block';
+
             const currentStageIdx = STAGES.findIndex(s => s.id === proj.current_stage);
             const progressWidth = (currentStageIdx / (STAGES.length - 1)) * 100;
 
-            area.innerHTML = `
-                <div style="background:white; padding:30px; border-radius:16px; border:1px solid var(--border); margin-top:20px; animation: slideUp 0.4s ease;">
+            detailView.innerHTML = `
+                <div style="background:var(--bg-card); backdrop-filter:var(--glass); padding:30px; border-radius:16px; border:1px solid var(--border); margin-top:20px; animation: slideUp 0.4s ease;">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin: 40px 0; position: relative; padding: 0 20px; overflow-x: auto;">
                         <div style="position: absolute; top: 18px; left: 40px; right: 40px; height: 3px; background: var(--border); z-index: 0;"></div>
-                        <div style="position: absolute; top: 18px; left: 40px; height: 3px; background: var(--nikawan-blue); z-index: 1; transition: width 0.6s ease; width: calc(${progressWidth}% - ${progressWidth === 100 ? 0 : 40}px);"></div>
+                        <div style="position: absolute; top: 18px; left: 40px; height: 3px; background: var(--nikawan-accent); z-index: 1; transition: width 0.6s ease; width: calc(${progressWidth}% - ${progressWidth === 100 ? 0 : 40}px);"></div>
                         
                         ${STAGES.map((s, idx) => {
                             const isClickable = idx <= currentStageIdx;
                             const commentBtn = isClickable ? 
-                                `<button style="position:absolute; top:-5px; right:-10px; background:var(--primary); color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" 
+                                `<button style="position:absolute; top:-5px; right:-10px; background:var(--nikawan-accent); color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" 
                                   onclick="event.stopPropagation(); openStageCommentModal('${s.id}', '${s.name}')" 
                                   title="Tambah Catatan"><i class="fas fa-comment"></i></button>` : '';
 
@@ -576,7 +592,7 @@
                             <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: ${isClickable ? 1 : 0.4}; transition: transform 0.2s; min-width: 80px; ${isClickable ? 'cursor:pointer;' : ''}" 
                                  ${isClickable ? `onclick="showStageHistory('${s.id}', '${proj.project_number}')"` : ''}>
                                 <div style="position:relative;">
-                                    <div style="width: 36px; height: 36px; border-radius: 50%; background: white; border: 3px solid ${isClickable ? 'var(--nikawan-blue)' : 'var(--border)'}; display: flex; align-items: center; justify-content: center; font-size: 16px; color: ${isClickable ? 'var(--nikawan-blue)' : 'var(--text-muted)'};">
+                                    <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--bg-main); border: 3px solid ${isClickable ? 'var(--nikawan-accent)' : 'var(--border)'}; display: flex; align-items: center; justify-content: center; font-size: 16px; color: ${isClickable ? 'var(--nikawan-accent)' : 'var(--text-muted)'};">
                                         <i class="fas ${s.icon}"></i>
                                     </div>
                                     ${commentBtn}
@@ -587,7 +603,7 @@
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items: flex-start; margin-bottom:25px; padding-bottom: 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 15px;">
-                        <div><h2 style="color:var(--nikawan-blue); margin-bottom: 5px;">${proj.project_number}</h2><p style="color:var(--text-muted); font-size: 14px;">Tahap: <span style="font-weight:bold; color:var(--nikawan-blue); text-transform:capitalize;">${STAGES[currentStageIdx]?.name || proj.current_stage}</span> | Nilai: Rp ${proj.value.toLocaleString()}</p></div>
+                        <div><h2 style="color:white; margin-bottom: 5px;">${proj.project_number}</h2><p style="color:var(--text-muted); font-size: 14px;">Tahap: <span style="font-weight:bold; color:var(--nikawan-accent); text-transform:capitalize;">${STAGES[currentStageIdx]?.name || proj.current_stage}</span> | Nilai: Rp ${proj.value.toLocaleString()}</p></div>
                         <div style="display:flex; gap:10px;">
                             <button class="btn btn-outline" onclick="document.getElementById('uploadModal').style.display='flex'"><i class="fas fa-upload"></i> Upload Dokumen</button>
                             <button class="btn btn-outline" onclick="generateTemplate()"><i class="fas fa-print"></i> Cetak Surat</button>
@@ -595,16 +611,16 @@
                         </div>
                     </div>
                     
-                    <div style="margin-bottom:30px;"><label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:8px; font-weight:600;">Deskripsi Pekerjaan</label><div style="background:#F8FAFC; padding:15px; border-radius:12px; font-size:14px; border:1px solid var(--border);">${proj.description || '-'}</div></div>
+                    <div style="margin-bottom:30px;"><label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:8px; font-weight:600;">Deskripsi Pekerjaan</label><div style="background:rgba(15, 23, 42, 0.6); padding:15px; border-radius:12px; font-size:14px; border:1px solid var(--border);">${proj.description || '-'}</div></div>
 
-                    <h4 style="margin:20px 0 15px; color:var(--nikawan-blue); font-size: 16px;"><i class="fas fa-folder-open" style="margin-right:8px;"></i>Arsip Dokumen</h4>
+                    <h4 style="margin:20px 0 15px; color:white; font-size: 16px;"><i class="fas fa-folder-open" style="margin-right:8px; color:var(--nikawan-accent);"></i>Arsip Dokumen</h4>
                     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:15px;">
-                        ${docs.length === 0 ? '<p style="color:var(--text-muted); grid-column: 1/-1; text-align:center; padding: 20px; background:#F8FAFC; border-radius:12px;">Belum ada dokumen terupload.</p>' : 
-                        docs.map(d => `<div style="background:#F8FAFC; padding:15px; border-radius:12px; border:1px solid var(--border); cursor:pointer; transition:0.2s;" onmouseover="this.style.borderColor='var(--nikawan-blue)'" onmouseout="this.style.borderColor='var(--border)'" onclick="window.open('${d.drive_url || '#'}','_blank')"><i class="fas fa-file-pdf" style="font-size:24px; color:var(--nikawan-blue); margin-bottom:10px;"></i><div style="font-weight:bold; font-size:13px; margin-bottom:4px;">${d.doc_type}</div><div style="font-size:11px; color:var(--text-muted);">${d.doc_number}</div></div>`).join('')}
+                        ${docs.length === 0 ? '<p style="color:var(--text-muted); grid-column: 1/-1; text-align:center; padding: 20px; background:rgba(15, 23, 42, 0.6); border-radius:12px;">Belum ada dokumen terupload.</p>' : 
+                        docs.map(d => `<div style="background:rgba(15, 23, 42, 0.6); padding:15px; border-radius:12px; border:1px solid var(--border); cursor:pointer; transition:0.2s;" onmouseover="this.style.borderColor='var(--nikawan-accent)'" onmouseout="this.style.borderColor='var(--border)'" onclick="window.open('${d.drive_url || '#'}','_blank')"><i class="fas fa-file-pdf" style="font-size:24px; color:var(--nikawan-accent); margin-bottom:10px;"></i><div style="font-weight:bold; font-size:13px; margin-bottom:4px; color:white;">${d.doc_type}</div><div style="font-size:11px; color:var(--text-muted);">${d.doc_number}</div></div>`).join('')}
                     </div>
                 </div>
             `;
-            area.scrollIntoView({ behavior: 'smooth' });
+            detailView.scrollIntoView({ behavior: 'smooth' });
         }
 
         // ==========================================
@@ -697,8 +713,8 @@
             document.getElementById('historyTitle').innerText = `Histori Tahap: ${stage?.name || stageId}`;
             const today = new Date().toLocaleDateString('id-ID');
             document.getElementById('historyBody').innerHTML = `
-                <div style="background:#F8FAFC; padding:20px; border-radius:12px; border:1px solid var(--border);">
-                    <h4 style="margin-bottom:15px; color:var(--nikawan-blue);">Detail Tahap ${stage?.name}</h4>
+                <div style="background:rgba(15, 23, 42, 0.6); padding:20px; border-radius:12px; border:1px solid var(--border);">
+                    <h4 style="margin-bottom:15px; color:var(--nikawan-accent);">Detail Tahap ${stage?.name}</h4>
                     <p style="margin-bottom:10px;"><strong>Proyek:</strong> ${projNum}</p>
                     <p style="margin-bottom:10px;"><strong>Status:</strong> <span style="color:var(--success); font-weight:bold;">Aktif/Terlewati</span></p>
                     <hr style="border:0; border-top:1px dashed var(--border); margin:15px 0;">
@@ -721,7 +737,7 @@
                 listContainer.innerHTML = comments.map(c => `
                     <div style="margin-bottom: 15px; border-bottom: 1px dashed var(--border); padding-bottom: 10px;">
                         <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                            <strong style="font-size:12px; color:var(--nikawan-blue);">${c.user_name}</strong>
+                            <strong style="font-size:12px; color:var(--nikawan-accent);">${c.user_name}</strong>
                             <span style="font-size:10px; color:var(--text-muted);">${new Date(c.created_at).toLocaleString('id-ID')}</span>
                         </div>
                         <p style="font-size:13px; color:var(--text-main);">${c.comment_text}</p>
@@ -749,7 +765,7 @@
                 showLoading(true);
                 await sb.from('projects').update({ current_stage: STAGES[idx+1].id }).eq('id', projId);
                 showLoading(false);
-                selectClient(selectedClientId);
+                loadProjectDetail(projId, selectedClientId);
             }
         }
 
@@ -797,7 +813,7 @@
 
                 alert('Dokumen berhasil diupload!'); 
                 closeModal('uploadModal'); 
-                selectClient(selectedClientId);
+                loadProjectDetail(currentProjectId, selectedClientId);
             } catch(err) { 
                 alert('Gagal upload: ' + err.message); 
             } finally { 
@@ -824,8 +840,8 @@
             if(error || !proj) return alert('Gagal memuat data proyek');
 
             const today = new Date().toLocaleDateString('id-ID', { year:'numeric', month:'long', day:'numeric' });
-            const logoTag = companyLogo ? `<img src="${companyLogo}">` : '';
-            const sigTag = companySignature ? `<img src="${companySignature}" style="max-height:40px;">` : '<div style="height:40px;"></div>';
+            const logoTag = `<img src="${companyLogo}">`;
+            const sigTag = `<img src="${companySignature}" style="max-height:40px;">`;
             
             const stage = STAGES.find(s => s.id === proj.current_stage);
             if (!stage) return alert('Tahap proyek tidak dikenali.');
@@ -1078,7 +1094,6 @@
         // ==========================================
         function showLoading(show) { document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
 
         // INIT
         document.addEventListener('DOMContentLoaded', () => {
