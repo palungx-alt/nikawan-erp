@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIKAWAN ERP V30 - Futuristic Multi-Project</title>
+    <title>NIKAWAN ERP V32 - Editable Notes & Auto Archive</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -117,6 +117,19 @@
         .project-item:hover { background: rgba(59, 130, 246, 0.1); border-color: var(--nikawan-accent); }
         .project-item.active { background: rgba(59, 130, 246, 0.15); border-color: var(--nikawan-accent); }
 
+        /* Professional Item Display Table */
+        .item-display-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        .item-display-table th { background: rgba(59, 130, 246, 0.1); padding: 10px; text-align: left; font-weight: 600; color: var(--nikawan-accent); border-bottom: 1px solid var(--border); }
+        .item-display-table td { padding: 10px; border-bottom: 1px solid var(--border); color: var(--text-main); }
+        .item-display-table td.num { text-align: right; font-family: 'Courier New', monospace; }
+        .item-display-table tr:last-child td { border-bottom: none; }
+
+        /* Document Card with Delete Button */
+        .doc-card-wrapper { position: relative; background:rgba(15, 23, 42, 0.6); padding:15px; border-radius:12px; border:1px solid var(--border); cursor:pointer; transition:0.2s; }
+        .doc-card-wrapper:hover { border-color:var(--nikawan-accent); }
+        .doc-delete-btn { position: absolute; top: 10px; right: 10px; background: rgba(239, 68, 68, 0.2); color: var(--danger); border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .doc-delete-btn:hover { background: var(--danger); color: white; }
+
         /* --- PRINT STYLES EXACT MATCH --- */
         #printArea { display: none; }
         @media print {
@@ -211,7 +224,7 @@
         </div>
     </div>
 
-    <!-- MODAL FORM PROYEK BARU DENGAN INPUT ITEM DINAMIS -->
+    <!-- MODAL FORM PROYEK BARU DENGAN INPUT ITEM DINAMIS & KETERANGAN EDITABLE -->
     <div id="projectModal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-header"><h3 style="color: var(--nikawan-accent);">Mulai Proyek / Penawaran Baru</h3><button onclick="closeModal('projectModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
@@ -238,7 +251,10 @@
                     <button type="button" class="btn btn-outline btn-xs" onclick="addItemRow()"><i class="fas fa-plus"></i> Tambah Baris Item</button>
                 </div>
 
-                <div class="form-group"><label>Catatan Tambahan / Keterangan</label><textarea id="projDesc" class="form-control" rows="2" placeholder="Contoh: Harga belum termasuk sewa genset..."></textarea></div>
+                <div class="form-group">
+                    <label>Keterangan / Syarat & Ketentuan (Bisa Diedit)</label>
+                    <textarea id="projNotes" class="form-control" rows="4" placeholder="a. Pembayaran 50% DP paling lambat 1 minggu setelah PO terkirim&#10;b. Pelunasan 50%, setelah pekerjaan selesai...&#10;c. Harga belum termasuk sewa genset eksternal"></textarea>
+                </div>
             </div>
             <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('projectModal')">Batal</button><button class="btn btn-primary" onclick="submitNewProject()"><i class="fas fa-save"></i> Simpan Proyek</button></div>
         </div>
@@ -384,7 +400,6 @@
         // BRANDING & LOCAL LOGO (AUTO LOAD FROM FOLDER)
         // ==========================================
         function applyBranding() { 
-            // Cek apakah file logo ada di folder yang sama
             fetch('logo.png').then(r => {
                 if(r.ok) {
                     document.getElementById('loginLogoImg').src = 'logo.png'; 
@@ -488,10 +503,8 @@
             const activeCard = document.getElementById(`card-${clientId}`);
             if(activeCard) activeCard.classList.add('selected');
 
-            // Ambil SEMUA proyek untuk client ini (Multi-Project Support)
             const { data: projects } = await sb.from('projects').select('*').eq('customer_id', clientId).order('created_at', {ascending: false});
             
-            // Update warna kartu berdasarkan proyek terakhir
             if (activeCard) {
                 activeCard.classList.remove('status-pending', 'status-active', 'status-completed');
                 activeCard.querySelector('.status-badge')?.remove();
@@ -528,7 +541,6 @@
                 return;
             }
 
-            // Render List Proyek (Multi-Project Selection)
             let projectListHtml = projects.map(p => {
                 const isActive = currentProjectId === p.id;
                 const stageName = STAGES.find(s => s.id === p.current_stage)?.name || p.current_stage;
@@ -561,7 +573,6 @@
             currentProjectId = projId;
             selectedClientId = clientId;
             
-            // Highlight active project
             document.querySelectorAll('.project-item').forEach(el => el.classList.remove('active'));
             event.currentTarget.classList.add('active');
 
@@ -574,6 +585,41 @@
 
             const currentStageIdx = STAGES.findIndex(s => s.id === proj.current_stage);
             const progressWidth = (currentStageIdx / (STAGES.length - 1)) * 100;
+
+            let items = [];
+            try { items = JSON.parse(proj.description); } catch(e) { items = []; }
+
+            let itemsTableHtml = '';
+            if(items.length > 0) {
+                itemsTableHtml = `
+                    <table class="item-display-table">
+                        <thead>
+                            <tr>
+                                <th style="width:40%;">Deskripsi</th>
+                                <th style="width:10%;">Qty</th>
+                                <th style="width:10%;">Satuan</th>
+                                <th style="width:15%;">Material</th>
+                                <th style="width:15%;">Jasa</th>
+                                <th style="width:10%;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${items.map(item => `
+                                <tr>
+                                    <td>${item.desc}</td>
+                                    <td class="num">${item.qty}</td>
+                                    <td>${item.unit}</td>
+                                    <td class="num">${item.mat.toLocaleString('id-ID')}</td>
+                                    <td class="num">${item.jasa.toLocaleString('id-ID')}</td>
+                                    <td class="num bold">${item.total.toLocaleString('id-ID')}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                itemsTableHtml = '<p style="color:var(--text-muted); font-style:italic;">Tidak ada detail item.</p>';
+            }
 
             detailView.innerHTML = `
                 <div style="background:var(--bg-card); backdrop-filter:var(--glass); padding:30px; border-radius:16px; border:1px solid var(--border); margin-top:20px; animation: slideUp 0.4s ease;">
@@ -611,12 +657,23 @@
                         </div>
                     </div>
                     
-                    <div style="margin-bottom:30px;"><label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:8px; font-weight:600;">Deskripsi Pekerjaan</label><div style="background:rgba(15, 23, 42, 0.6); padding:15px; border-radius:12px; font-size:14px; border:1px solid var(--border);">${proj.description || '-'}</div></div>
+                    <div style="margin-bottom:30px;">
+                        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:8px; font-weight:600;">Detail Item Pekerjaan</label>
+                        <div style="background:rgba(15, 23, 42, 0.6); padding:15px; border-radius:12px; border:1px solid var(--border);">
+                            ${itemsTableHtml}
+                        </div>
+                    </div>
 
                     <h4 style="margin:20px 0 15px; color:white; font-size: 16px;"><i class="fas fa-folder-open" style="margin-right:8px; color:var(--nikawan-accent);"></i>Arsip Dokumen</h4>
                     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:15px;">
                         ${docs.length === 0 ? '<p style="color:var(--text-muted); grid-column: 1/-1; text-align:center; padding: 20px; background:rgba(15, 23, 42, 0.6); border-radius:12px;">Belum ada dokumen terupload.</p>' : 
-                        docs.map(d => `<div style="background:rgba(15, 23, 42, 0.6); padding:15px; border-radius:12px; border:1px solid var(--border); cursor:pointer; transition:0.2s;" onmouseover="this.style.borderColor='var(--nikawan-accent)'" onmouseout="this.style.borderColor='var(--border)'" onclick="window.open('${d.drive_url || '#'}','_blank')"><i class="fas fa-file-pdf" style="font-size:24px; color:var(--nikawan-accent); margin-bottom:10px;"></i><div style="font-weight:bold; font-size:13px; margin-bottom:4px; color:white;">${d.doc_type}</div><div style="font-size:11px; color:var(--text-muted);">${d.doc_number}</div></div>`).join('')}
+                        docs.map(d => `
+                        <div class="doc-card-wrapper" onmouseover="this.style.borderColor='var(--nikawan-accent)'" onmouseout="this.style.borderColor='var(--border)'" onclick="window.open('${d.drive_url || '#'}','_blank')">
+                            <button class="doc-delete-btn" onclick="event.stopPropagation(); deleteDocument('${d.id}', '${d.drive_file_id}')" title="Hapus Dokumen"><i class="fas fa-trash"></i></button>
+                            <i class="fas fa-file-pdf" style="font-size:24px; color:var(--nikawan-accent); margin-bottom:10px;"></i>
+                            <div style="font-weight:bold; font-size:13px; margin-bottom:4px; color:white;">${d.doc_type}</div>
+                            <div style="font-size:11px; color:var(--text-muted);">${d.doc_number}</div>
+                        </div>`).join('')}
                     </div>
                 </div>
             `;
@@ -640,7 +697,7 @@
             if(confirm('Hapus client?')) { await sb.from('customers').update({ status: 'deleted' }).eq('id', id); renderClients(); }
         }
 
-        // --- LOGIKA FORM PROYEK BARU DENGAN ITEM DINAMIS ---
+        // --- LOGIKA FORM PROYEK BARU DENGAN ITEM DINAMIS & KETERANGAN ---
         function addItemRow() {
             const tbody = document.getElementById('itemsBody');
             const row = document.createElement('tr');
@@ -662,9 +719,9 @@
             if (error) { console.error(error); alert('Gagal generate nomor otomatis.'); showLoading(false); return; }
             
             document.getElementById('projNumber').value = autoNum;
-            document.getElementById('projDesc').value = '';
-            document.getElementById('itemsBody').innerHTML = ''; // Reset items
-            addItemRow(); // Add first empty row
+            document.getElementById('projNotes').value = `a. Pembayaran 50% DP paling lambat 1 minggu setelah PO terkirim\nb. Pelunasan 50%, setelah pekerjaan selesai dan berita acara ditandatangani\nc. Maksimal pembayaran pelunasan, 30 hari setelah invoice dikirim\nd. Harga belum termasuk sewa genset eksternal`;
+            document.getElementById('itemsBody').innerHTML = ''; 
+            addItemRow(); 
             
             showLoading(false);
             document.getElementById('projectModal').style.display = 'flex';
@@ -672,9 +729,8 @@
 
         async function submitNewProject() {
             const num = document.getElementById('projNumber').value;
-            const desc = document.getElementById('projDesc').value;
+            const notes = document.getElementById('projNotes').value;
             
-            // Collect items data
             const rows = document.querySelectorAll('#itemsBody tr');
             let itemsData = [];
             let totalValue = 0;
@@ -695,17 +751,74 @@
             if(itemsData.length === 0) return alert('Isi minimal 1 item pekerjaan');
 
             showLoading(true);
+            
+            // Simpan items dan notes dalam satu field description sebagai JSON object
+            const payloadData = {
+                items: itemsData,
+                notes: notes
+            };
+
             const payload = {
                 customer_id: tempClientIdForProject, 
                 project_number: num, 
                 value: totalValue, 
-                description: JSON.stringify(itemsData) // Store items as JSON
+                description: JSON.stringify(payloadData) 
             };
 
-            const { error } = await sb.from('projects').insert(payload);
+            const { error: projErr } = await sb.from('projects').insert(payload);
+            
+            if(!projErr) {
+                // AUTO ARCHIVE: Simpan draft penawaran ke tabel documents
+                await sb.from('documents').insert({
+                    project_id: null, // Akan diupdate nanti saat project ID tersedia, atau simpan sebagai draft global
+                    // Karena kita butuh project_id, kita harus insert project dulu lalu update, 
+                    // tapi untuk simplifikasi V32 ini, kita asumsikan auto-archive terjadi setelah refresh view
+                    // Atau kita bisa simpan notes/items di project saja, dan "Arsip Dokumen" menampilkan project itu sendiri sebagai draft.
+                    // Untuk memenuhi req "simpan di arsip dokumen", kita buat entry dummy di documents setelah project created.
+                    // Tapi karena kita belum punya ID project baru, kita skip step ini di transaction single call.
+                    // Solusi: Setelah insert project berhasil, kita fetch ID project terbaru lalu insert ke documents.
+                });
+                
+                // Fetch project ID yang baru saja dibuat
+                const { data: newProj } = await sb.from('projects').select('id').eq('project_number', num).single();
+                if(newProj) {
+                    await sb.from('documents').insert({
+                        project_id: newProj.id,
+                        doc_type: 'Draft Penawaran',
+                        doc_number: num,
+                        drive_file_id: 'internal-draft',
+                        drive_url: '#'
+                    });
+                }
+            }
+
             showLoading(false);
-            if(error) alert('Gagal menyimpan proyek: ' + error.message);
+            if(projErr) alert('Gagal menyimpan proyek: ' + projErr.message);
             else { closeModal('projectModal'); selectClient(tempClientIdForProject); }
+        }
+
+        // Fungsi Hapus Dokumen dari Arsip
+        async function deleteDocument(docId, fileId) {
+            if(!confirm('Yakin ingin menghapus dokumen ini dari arsip?')) return;
+            
+            showLoading(true);
+            try {
+                // Hapus file dari storage jika bukan internal draft
+                if(fileId && fileId !== 'internal-draft') {
+                    await sb.storage.from('documents').remove([fileId]);
+                }
+                
+                // Hapus data dari database
+                const { error } = await sb.from('documents').delete().eq('id', docId);
+                if(error) throw error;
+                
+                alert('Dokumen berhasil dihapus!');
+                loadProjectDetail(currentProjectId, selectedClientId); // Refresh view
+            } catch(err) {
+                alert('Gagal menghapus dokumen: ' + err.message);
+            } finally {
+                showLoading(false);
+            }
         }
 
         async function showStageHistory(stageId, projNum) {
@@ -769,7 +882,6 @@
             }
         }
 
-        // --- FIXED UPLOAD LOGIC FOR STORAGE POLICY ---
         async function handleUploadFile() {
             const file = document.getElementById('upFile').files[0];
             const docType = document.getElementById('upDocType').value;
@@ -778,21 +890,11 @@
             showLoading(true);
             try {
                 const fileName = `${currentProjectId}/${Date.now()}_${file.name}`;
+                const { data: storageData, error: uploadErr } = await sb.storage.from('documents').upload(fileName, file, { upsert: true }); 
+                if(uploadErr) throw new Error('Gagal upload ke storage: ' + uploadErr.message);
                 
-                // 1. Upload to Storage with upsert option to avoid conflicts
-                const { data: storageData, error: uploadErr } = await sb.storage
-                    .from('documents')
-                    .upload(fileName, file, { upsert: true }); 
-                    
-                if(uploadErr) {
-                    console.error('Storage Error:', uploadErr);
-                    throw new Error('Gagal upload ke storage: ' + uploadErr.message + '. Pastikan bucket "documents" ada dan policy INSERT aktif.');
-                }
-                
-                // 2. Get Public URL
                 const { data: urlData } = sb.storage.from('documents').getPublicUrl(fileName);
                 
-                // 3. Generate Doc Number
                 let docNum = document.getElementById('upDocNumber').value;
                 if(!docNum) { 
                     const prefix = docType.substring(0,3).toUpperCase(); 
@@ -800,25 +902,16 @@
                     docNum = seqData; 
                 }
 
-                // 4. Save to Database
                 const { error: dbErr } = await sb.from('documents').insert({ 
-                    project_id: currentProjectId, 
-                    doc_type: docType, 
-                    doc_number: docNum, 
-                    drive_file_id: fileName, 
-                    drive_url: urlData.publicUrl 
+                    project_id: currentProjectId, doc_type: docType, doc_number: docNum, drive_file_id: fileName, drive_url: urlData.publicUrl 
                 });
-
                 if(dbErr) throw new Error('Gagal simpan data ke database: ' + dbErr.message);
 
                 alert('Dokumen berhasil diupload!'); 
                 closeModal('uploadModal'); 
                 loadProjectDetail(currentProjectId, selectedClientId);
-            } catch(err) { 
-                alert('Gagal upload: ' + err.message); 
-            } finally { 
-                showLoading(false); 
-            }
+            } catch(err) { alert('Gagal upload: ' + err.message); } 
+            finally { showLoading(false); }
         }
 
         async function openUserModal() { if(currentUser.role !== 'super_admin') return alert('Akses ditolak.'); document.getElementById('userModal').style.display = 'flex'; }
@@ -846,9 +939,12 @@
             const stage = STAGES.find(s => s.id === proj.current_stage);
             if (!stage) return alert('Tahap proyek tidak dikenali.');
 
-            // Parse items from description (stored as JSON)
-            let items = [];
-            try { items = JSON.parse(proj.description); } catch(e) { items = []; }
+            // Parse data dari description (JSON object containing items and notes)
+            let parsedData = {};
+            try { parsedData = JSON.parse(proj.description); } catch(e) { parsedData = { items: [], notes: '' }; }
+            
+            let items = parsedData.items || [];
+            let customNotes = parsedData.notes || '';
             
             // Calculate totals dynamically
             let totalMat = 0, totalJasa = 0;
@@ -862,8 +958,8 @@
 
             let docContent = '';
 
-            // FORMAT QUOTATION EXACT MATCH (NSS-Q-X-26-006) WITH DYNAMIC DATA
-            if (['permintaan_sales', 'pembuatan_penawaran', 'kirim_email'].includes(stage.id)) {
+            // FORMAT QUOTATION EXACT MATCH (NSS-Q-X-26-006) WITH DYNAMIC DATA & EDITABLE NOTES
+            if (['permintaan_sales', 'pembuatan_penawaran', 'kirim_email', 'approval_direktur'].includes(stage.id)) {
                 let rowsHtml = '';
                 items.forEach((item, index) => {
                     const matTotal = item.mat * item.qty;
@@ -884,6 +980,9 @@
                         </tr>
                     `;
                 });
+
+                // Convert newline characters in notes to HTML breaks
+                let notesHtml = customNotes.replace(/\n/g, '<br>');
 
                 docContent = `
                     <div class="doc-header keep-together">
@@ -945,10 +1044,7 @@
 
                     <div style="margin-top:15px; font-size:9pt;">
                         <p><strong>Keterangan :</strong></p>
-                        <p>a. Pembayaran 50% DP paling lambat 1 minggu setelah PO terkirim<br>
-                        b. Pelunasan 50%, setelah pekerjaan selesai dan berita acara ditandatangani<br>
-                        c. Maksimal pembayaran pelunasan, 30 hari setelah invoice dikirim<br>
-                        d. Harga belum termasuk sewa genset eksternal</p>
+                        <p>${notesHtml}</p>
                     </div>
 
                     <div style="margin-top:20px; font-size:9pt;">
@@ -964,7 +1060,10 @@
                         </div>
                         <div style="width:48%; text-align:center;">
                             <p>Approved by,</p>
-                            <div style="height:60px;"></div>
+                            <!-- STAMPEL KOSONG UNTUK APPROVAL DIREKTUR -->
+                            <div style="height:60px; border: 1px dashed #ccc; display:flex; align-items:center; justify-content:center; color:#999; font-size:8pt;">
+                                [ Stampel & Tanda Tangan Approval ]
+                            </div>
                             <p style="font-size:8pt;">Please sign and send back by email</p>
                         </div>
                     </div>
