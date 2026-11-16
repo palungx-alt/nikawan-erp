@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIKAWAN ERP V35 - Director Approval Logic & Sales Owner</title>
+    <title>NIKAWAN ERP V36 - Fixed Signatures & Scrollable Stepper</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -664,29 +664,33 @@
 
             detailView.innerHTML = `
                 <div style="background:var(--bg-card); backdrop-filter:var(--glass); padding:30px; border-radius:16px; border:1px solid var(--border); margin-top:20px; animation: slideUp 0.4s ease;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin: 40px 0; position: relative; padding: 0 20px; overflow-x: auto;">
-                        <div style="position: absolute; top: 18px; left: 40px; right: 40px; height: 3px; background: var(--border); z-index: 0;"></div>
-                        <div style="position: absolute; top: 18px; left: 40px; height: 3px; background: var(--nikawan-accent); z-index: 1; transition: width 0.6s ease; width: calc(${progressWidth}% - ${progressWidth === 100 ? 0 : 40}px);"></div>
-                        
-                        ${STAGES.map((s, idx) => {
-                            const isClickable = idx <= currentStageIdx;
-                            const commentBtn = isClickable ? 
-                                `<button style="position:absolute; top:-5px; right:-10px; background:var(--nikawan-accent); color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" 
-                                  onclick="event.stopPropagation(); openStageCommentModal('${s.id}', '${s.name}')" 
-                                  title="Tambah Catatan"><i class="fas fa-comment"></i></button>` : '';
+                    
+                    <!-- SCROLLABLE STEPPER CONTAINER -->
+                    <div style="width:100%; overflow-x: auto; padding-bottom: 10px; margin: 40px 0;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; position: relative; padding: 0 20px; min-width: 800px;">
+                            <div style="position: absolute; top: 18px; left: 40px; right: 40px; height: 3px; background: var(--border); z-index: 0;"></div>
+                            <div style="position: absolute; top: 18px; left: 40px; height: 3px; background: var(--nikawan-accent); z-index: 1; transition: width 0.6s ease; width: calc(${progressWidth}% - ${progressWidth === 100 ? 0 : 40}px);"></div>
+                            
+                            ${STAGES.map((s, idx) => {
+                                const isClickable = idx <= currentStageIdx;
+                                const commentBtn = isClickable ? 
+                                    `<button style="position:absolute; top:-5px; right:-10px; background:var(--nikawan-accent); color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" 
+                                      onclick="event.stopPropagation(); openStageCommentModal('${s.id}', '${s.name}')" 
+                                      title="Tambah Catatan"><i class="fas fa-comment"></i></button>` : '';
 
-                            return `
-                            <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: ${isClickable ? 1 : 0.4}; transition: transform 0.2s; min-width: 80px; ${isClickable ? 'cursor:pointer;' : ''}" 
-                                 ${isClickable ? `onclick="showStageHistory('${s.id}', '${proj.project_number}')"` : ''}>
-                                <div style="position:relative;">
-                                    <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--bg-main); border: 3px solid ${isClickable ? 'var(--nikawan-accent)' : 'var(--border)'}; display: flex; align-items: center; justify-content: center; font-size: 16px; color: ${isClickable ? 'var(--nikawan-accent)' : 'var(--text-muted)'};">
-                                        <i class="fas ${s.icon}"></i>
+                                return `
+                                <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: ${isClickable ? 1 : 0.4}; transition: transform 0.2s; min-width: 80px; ${isClickable ? 'cursor:pointer;' : ''}" 
+                                     ${isClickable ? `onclick="showStageHistory('${s.id}', '${proj.project_number}')"` : ''}>
+                                    <div style="position:relative;">
+                                        <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--bg-main); border: 3px solid ${isClickable ? 'var(--nikawan-accent)' : 'var(--border)'}; display: flex; align-items: center; justify-content: center; font-size: 16px; color: ${isClickable ? 'var(--nikawan-accent)' : 'var(--text-muted)'};">
+                                            <i class="fas ${s.icon}"></i>
+                                        </div>
+                                        ${commentBtn}
                                     </div>
-                                    ${commentBtn}
-                                </div>
-                                <div style="font-size: 9px; font-weight: bold; text-transform: uppercase; color: var(--text-muted); max-width: 80px; text-align: center; line-height: 1.2;">${s.name.split('. ')[1] || s.name}</div>
-                            </div>`;
-                        }).join('')}
+                                    <div style="font-size: 9px; font-weight: bold; text-transform: uppercase; color: var(--text-muted); max-width: 80px; text-align: center; line-height: 1.2; white-space: nowrap;">${s.name.split('. ')[1] || s.name}</div>
+                                </div>`;
+                            }).join('')}
+                        </div>
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items: flex-start; margin-bottom:25px; padding-bottom: 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 15px;">
@@ -1052,7 +1056,7 @@
             if(error) alert('Gagal: ' + error.message); else { alert('User berhasil ditambahkan'); closeModal('userModal'); }
         }
 
-        // --- TEMPLATE GENERATOR (SMART SIGNATURES BASED ON STAGE) ---
+        // --- TEMPLATE GENERATOR (FIXED SIGNATURES BASED ON STAGE) ---
         async function generateTemplate() {
             if(!currentProjectId) return alert('Tidak ada proyek aktif');
             showLoading(true);
@@ -1116,7 +1120,7 @@
                 // Logika Tanda Tangan Dinamis
                 const approvedByContent = isApproved 
                     ? `<div style="height:60px;">${sigTag}</div><p style="font-weight:bold;">( Hermawan Susanto )</p>` 
-                    : `<div style="height:60px; border: 1px dashed #ccc; display:flex; align-items:center; justify-content:center; color:#999; font-size:8pt;">[ Stampel & TTD Approval ]</div>`;
+                    : `<div style="height:60px; border: 1px dashed #ccc; display:flex; align-items:center; justify-content:center; color:#999; font-size:8pt;">[ Stampel & Tanda Tangan Approval ]</div>`;
 
                 docContent = `
                     <div class="doc-header keep-together">
@@ -1187,11 +1191,14 @@
                     </div>
 
                     <div style="margin-top:40px; display:flex; justify-content:space-between; page-break-inside:avoid;">
+                        <!-- BAGIAN KIRI: BEST REGARDS (SELALU ADA TTD HERMAWAN) -->
                         <div style="width:48%; text-align:left;">
                             <p>Best regards,</p>
                             <div style="height:60px;">${sigTag}</div>
                             <p style="font-weight:bold;">( Hermawan Susanto )</p>
                         </div>
+                        
+                        <!-- BAGIAN KANAN: APPROVED BY (KOSONG JIKA BELUM APPROVAL, TTD HERMAWAN JIKA SUDAH) -->
                         <div style="width:48%; text-align:center;">
                             <p>Approved by,</p>
                             ${approvedByContent}
@@ -1200,7 +1207,8 @@
                     </div>
                 `;
             } 
-            // FORMAT INVOICE, PO, BAST tetap sama seperti sebelumnya...
+            
+            // FORMAT INVOICE (Sesuai NSS-INV-XI26-002)
             else if (['invoice_dp', 'invoice_pelunasan'].includes(stage.id)) {
                  const dpp = Math.round(grandTotal / 1.12);
                  const ppnInv = grandTotal - dpp;
@@ -1244,6 +1252,8 @@
                         </div>
                     </div>`;
             }
+            
+            // FORMAT PO PEMBELIAN (Sesuai PO Distritama)
             else if (stage.id === 'po_customer') {
                 docContent = `
                     <div class="doc-header keep-together">
@@ -1279,6 +1289,8 @@
                     </div>
                     <div style="margin-top:20px; font-size:8pt; text-align:center; border-top:1px solid #ccc; padding-top:10px;">PT. Nikawan Solusindo Sejahtera/ CS 1: 0822 4980 4379, CS 2: 0812 9310 1282, email: finance@nikawan-solusindo.com</div>`;
             }
+            
+            // FORMAT BAST (Sesuai BAST Aica Indria)
             else if (stage.id === 'bast_report') {
                 docContent = `
                     <div class="doc-header keep-together">
