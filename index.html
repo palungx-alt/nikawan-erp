@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIKAWAN ERP V32 - Editable Notes & Auto Archive</title>
+    <title>NIKAWAN ERP V35 - Director Approval Logic & Sales Owner</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -224,13 +224,18 @@
         </div>
     </div>
 
-    <!-- MODAL FORM PROYEK BARU DENGAN INPUT ITEM DINAMIS & KETERANGAN EDITABLE -->
+    <!-- MODAL FORM PROYEK BARU DENGAN SALES OWNER -->
     <div id="projectModal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-header"><h3 style="color: var(--nikawan-accent);">Mulai Proyek / Penawaran Baru</h3><button onclick="closeModal('projectModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
             <div class="modal-body">
                 <div class="form-group"><label>Nomor Proyek/Penawaran (Otomatis)</label><input id="projNumber" class="form-control" readonly style="background:rgba(255,255,255,0.05); color:#64748b; cursor:not-allowed;"></div>
                 
+                <div class="form-group">
+                    <label>Sales / PIC Proyek (Siapa yang dapat proyek ini?)</label>
+                    <input id="projSales" class="form-control" placeholder="Contoh: Budi Santoso / Tim Sales A">
+                </div>
+
                 <div style="margin-bottom: 15px;">
                     <label style="font-size: 13px; color: var(--text-muted); font-weight: 600; display:block; margin-bottom:8px;">Detail Item Penawaran</label>
                     <table class="items-table" id="itemsTable">
@@ -253,10 +258,41 @@
 
                 <div class="form-group">
                     <label>Keterangan / Syarat & Ketentuan (Bisa Diedit)</label>
-                    <textarea id="projNotes" class="form-control" rows="4" placeholder="a. Pembayaran 50% DP paling lambat 1 minggu setelah PO terkirim&#10;b. Pelunasan 50%, setelah pekerjaan selesai...&#10;c. Harga belum termasuk sewa genset eksternal"></textarea>
+                    <textarea id="projNotes" class="form-control" rows="4" placeholder="a. Pembayaran 50% DP paling lambat 1 minggu setelah PO terkirim&#10;b. Pelunasan 50%, setelah pekerjaan selesai..."></textarea>
                 </div>
             </div>
             <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('projectModal')">Batal</button><button class="btn btn-primary" onclick="submitNewProject()"><i class="fas fa-save"></i> Simpan Proyek</button></div>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT ITEM SETELAH NEGOSIASI -->
+    <div id="editProjectModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header"><h3 style="color: var(--nikawan-accent);">Edit Item & Keterangan (Negosiasi)</h3><button onclick="closeModal('editProjectModal')" style="background:none;border:none;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button></div>
+            <div class="modal-body">
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 13px; color: var(--text-muted); font-weight: 600; display:block; margin-bottom:8px;">Update Detail Item</label>
+                    <table class="items-table" id="editItemsTable">
+                        <thead>
+                            <tr>
+                                <th style="width:40%;">Deskripsi Pekerjaan</th>
+                                <th style="width:10%;">Qty</th>
+                                <th style="width:10%;">Satuan</th>
+                                <th style="width:15%;">Harga Material</th>
+                                <th style="width:15%;">Harga Jasa</th>
+                                <th style="width:10%;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="editItemsBody"></tbody>
+                    </table>
+                    <button type="button" class="btn btn-outline btn-xs" onclick="addEditItemRow()"><i class="fas fa-plus"></i> Tambah Baris Item</button>
+                </div>
+                <div class="form-group">
+                    <label>Update Keterangan / Catatan</label>
+                    <textarea id="editProjNotes" class="form-control" rows="4"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('editProjectModal')">Batal</button><button class="btn btn-primary" onclick="saveEditedProject()"><i class="fas fa-save"></i> Simpan Perubahan</button></div>
         </div>
     </div>
 
@@ -329,8 +365,8 @@
         } catch(e) { console.error(e); alert('Gagal memuat library Supabase.'); }
 
         let currentUser = null;
-        let companyLogo = 'logo.png'; // Default path local
-        let companySignature = 'signature.png'; // Default path local
+        let companyLogo = 'logo.png'; 
+        let companySignature = 'signature.png'; 
         let selectedClientId = null;
         let currentProjectId = null;
         let tempClientIdForProject = null;
@@ -587,7 +623,12 @@
             const progressWidth = (currentStageIdx / (STAGES.length - 1)) * 100;
 
             let items = [];
-            try { items = JSON.parse(proj.description); } catch(e) { items = []; }
+            let salesOwner = '';
+            try { 
+                const parsed = JSON.parse(proj.description); 
+                items = parsed.items || []; 
+                salesOwner = parsed.sales || '';
+            } catch(e) { items = []; }
 
             let itemsTableHtml = '';
             if(items.length > 0) {
@@ -649,9 +690,14 @@
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items: flex-start; margin-bottom:25px; padding-bottom: 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 15px;">
-                        <div><h2 style="color:white; margin-bottom: 5px;">${proj.project_number}</h2><p style="color:var(--text-muted); font-size: 14px;">Tahap: <span style="font-weight:bold; color:var(--nikawan-accent); text-transform:capitalize;">${STAGES[currentStageIdx]?.name || proj.current_stage}</span> | Nilai: Rp ${proj.value.toLocaleString()}</p></div>
+                        <div>
+                            <h2 style="color:white; margin-bottom: 5px;">${proj.project_number}</h2>
+                            <p style="color:var(--text-muted); font-size: 14px;">Tahap: <span style="font-weight:bold; color:var(--nikawan-accent); text-transform:capitalize;">${STAGES[currentStageIdx]?.name || proj.current_stage}</span> | Nilai: Rp ${proj.value.toLocaleString()}</p>
+                            ${salesOwner ? `<p style="color:var(--nikawan-accent); font-size: 12px; margin-top:5px;"><i class="fas fa-user-tie"></i> Sales/PIC: ${salesOwner}</p>` : ''}
+                        </div>
                         <div style="display:flex; gap:10px;">
                             <button class="btn btn-outline" onclick="document.getElementById('uploadModal').style.display='flex'"><i class="fas fa-upload"></i> Upload Dokumen</button>
+                            <button class="btn btn-outline" onclick="openEditProjectModal()"><i class="fas fa-edit"></i> Edit Item</button>
                             <button class="btn btn-outline" onclick="generateTemplate()"><i class="fas fa-print"></i> Cetak Surat</button>
                             <button class="btn btn-primary" onclick="advanceStage('${proj.id}')"><i class="fas fa-arrow-right"></i> Lanjut Tahap</button>
                         </div>
@@ -697,7 +743,7 @@
             if(confirm('Hapus client?')) { await sb.from('customers').update({ status: 'deleted' }).eq('id', id); renderClients(); }
         }
 
-        // --- LOGIKA FORM PROYEK BARU DENGAN ITEM DINAMIS & KETERANGAN ---
+        // --- LOGIKA FORM PROYEK BARU DENGAN SALES OWNER ---
         function addItemRow() {
             const tbody = document.getElementById('itemsBody');
             const row = document.createElement('tr');
@@ -719,6 +765,7 @@
             if (error) { console.error(error); alert('Gagal generate nomor otomatis.'); showLoading(false); return; }
             
             document.getElementById('projNumber').value = autoNum;
+            document.getElementById('projSales').value = currentUser.full_name || ''; // Default ke user yang login
             document.getElementById('projNotes').value = `a. Pembayaran 50% DP paling lambat 1 minggu setelah PO terkirim\nb. Pelunasan 50%, setelah pekerjaan selesai dan berita acara ditandatangani\nc. Maksimal pembayaran pelunasan, 30 hari setelah invoice dikirim\nd. Harga belum termasuk sewa genset eksternal`;
             document.getElementById('itemsBody').innerHTML = ''; 
             addItemRow(); 
@@ -729,6 +776,7 @@
 
         async function submitNewProject() {
             const num = document.getElementById('projNumber').value;
+            const sales = document.getElementById('projSales').value;
             const notes = document.getElementById('projNotes').value;
             
             const rows = document.querySelectorAll('#itemsBody tr');
@@ -752,10 +800,10 @@
 
             showLoading(true);
             
-            // Simpan items dan notes dalam satu field description sebagai JSON object
             const payloadData = {
                 items: itemsData,
-                notes: notes
+                notes: notes,
+                sales: sales
             };
 
             const payload = {
@@ -768,18 +816,6 @@
             const { error: projErr } = await sb.from('projects').insert(payload);
             
             if(!projErr) {
-                // AUTO ARCHIVE: Simpan draft penawaran ke tabel documents
-                await sb.from('documents').insert({
-                    project_id: null, // Akan diupdate nanti saat project ID tersedia, atau simpan sebagai draft global
-                    // Karena kita butuh project_id, kita harus insert project dulu lalu update, 
-                    // tapi untuk simplifikasi V32 ini, kita asumsikan auto-archive terjadi setelah refresh view
-                    // Atau kita bisa simpan notes/items di project saja, dan "Arsip Dokumen" menampilkan project itu sendiri sebagai draft.
-                    // Untuk memenuhi req "simpan di arsip dokumen", kita buat entry dummy di documents setelah project created.
-                    // Tapi karena kita belum punya ID project baru, kita skip step ini di transaction single call.
-                    // Solusi: Setelah insert project berhasil, kita fetch ID project terbaru lalu insert ke documents.
-                });
-                
-                // Fetch project ID yang baru saja dibuat
                 const { data: newProj } = await sb.from('projects').select('id').eq('project_number', num).single();
                 if(newProj) {
                     await sb.from('documents').insert({
@@ -797,23 +833,113 @@
             else { closeModal('projectModal'); selectClient(tempClientIdForProject); }
         }
 
+        // --- FUNGSI EDIT PROYEK SETELAH NEGOSIASI ---
+        async function openEditProjectModal() {
+            if(!currentProjectId) return;
+            showLoading(true);
+            const { data: proj } = await sb.from('projects').select('*').eq('id', currentProjectId).single();
+            showLoading(false);
+
+            let items = [];
+            let notes = '';
+            try { 
+                const parsed = JSON.parse(proj.description); 
+                items = parsed.items || []; 
+                notes = parsed.notes || '';
+            } catch(e) {}
+
+            document.getElementById('editProjNotes').value = notes;
+            const editTbody = document.getElementById('editItemsBody');
+            editTbody.innerHTML = '';
+            
+            items.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><input type="text" class="item-desc" value="${item.desc}"></td>
+                    <td><input type="number" class="item-qty" value="${item.qty}"></td>
+                    <td><input type="text" class="item-unit" value="${item.unit}"></td>
+                    <td><input type="number" class="item-mat" value="${item.mat}"></td>
+                    <td><input type="number" class="item-jasa" value="${item.jasa}"></td>
+                    <td style="text-align:center;"><button type="button" class="btn btn-danger btn-xs" onclick="this.closest('tr').remove()"><i class="fas fa-trash"></i></button></td>
+                `;
+                editTbody.appendChild(row);
+            });
+
+            document.getElementById('editProjectModal').style.display = 'flex';
+        }
+
+        function addEditItemRow() {
+            const tbody = document.getElementById('editItemsBody');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><input type="text" class="item-desc" placeholder="Deskripsi pekerjaan..."></td>
+                <td><input type="number" class="item-qty" placeholder="0" min="1"></td>
+                <td><input type="text" class="item-unit" placeholder="Unit"></td>
+                <td><input type="number" class="item-mat" placeholder="0" min="0"></td>
+                <td><input type="number" class="item-jasa" placeholder="0" min="0"></td>
+                <td style="text-align:center;"><button type="button" class="btn btn-danger btn-xs" onclick="this.closest('tr').remove()"><i class="fas fa-trash"></i></button></td>
+            `;
+            tbody.appendChild(row);
+        }
+
+        async function saveEditedProject() {
+            const notes = document.getElementById('editProjNotes').value;
+            const rows = document.querySelectorAll('#editItemsBody tr');
+            let itemsData = [];
+            let totalValue = 0;
+
+            rows.forEach(row => {
+                const d = row.querySelector('.item-desc').value;
+                const q = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const u = row.querySelector('.item-unit').value;
+                const m = parseFloat(row.querySelector('.item-mat').value) || 0;
+                const j = parseFloat(row.querySelector('.item-jasa').value) || 0;
+                
+                if(d && q > 0) {
+                    itemsData.push({ desc: d, qty: q, unit: u, mat: m, jasa: j, total: (m+j)*q });
+                    totalValue += (m+j)*q;
+                }
+            });
+
+            if(itemsData.length === 0) return alert('Isi minimal 1 item pekerjaan');
+
+            showLoading(true);
+            
+            // Ambil data lama untuk mempertahankan sales owner
+            const { data: oldProj } = await sb.from('projects').select('description').eq('id', currentProjectId).single();
+            let oldSales = '';
+            try { oldSales = JSON.parse(oldProj.description).sales || ''; } catch(e){}
+
+            const payloadData = { items: itemsData, notes: notes, sales: oldSales };
+            
+            const { error } = await sb.from('projects').update({ 
+                value: totalValue, 
+                description: JSON.stringify(payloadData) 
+            }).eq('id', currentProjectId);
+
+            showLoading(false);
+            if(error) alert('Gagal update: ' + error.message);
+            else { 
+                alert('Proyek berhasil diupdate!');
+                closeModal('editProjectModal'); 
+                loadProjectDetail(currentProjectId, selectedClientId); 
+            }
+        }
+
         // Fungsi Hapus Dokumen dari Arsip
         async function deleteDocument(docId, fileId) {
             if(!confirm('Yakin ingin menghapus dokumen ini dari arsip?')) return;
             
             showLoading(true);
             try {
-                // Hapus file dari storage jika bukan internal draft
                 if(fileId && fileId !== 'internal-draft') {
                     await sb.storage.from('documents').remove([fileId]);
                 }
-                
-                // Hapus data dari database
                 const { error } = await sb.from('documents').delete().eq('id', docId);
                 if(error) throw error;
                 
                 alert('Dokumen berhasil dihapus!');
-                loadProjectDetail(currentProjectId, selectedClientId); // Refresh view
+                loadProjectDetail(currentProjectId, selectedClientId);
             } catch(err) {
                 alert('Gagal menghapus dokumen: ' + err.message);
             } finally {
@@ -871,6 +997,7 @@
             else { const stage = STAGES.find(s => s.id === currentStageForComment); openStageCommentModal(currentStageForComment, stage?.name || currentStageForComment); }
         }
 
+        // FIX REFRESH TAHAP OTOMATIS
         async function advanceStage(projId) {
             const { data: proj } = await sb.from('projects').select('current_stage').eq('id', projId).single();
             const idx = STAGES.findIndex(s => s.id === proj.current_stage);
@@ -878,6 +1005,7 @@
                 showLoading(true);
                 await sb.from('projects').update({ current_stage: STAGES[idx+1].id }).eq('id', projId);
                 showLoading(false);
+                // Langsung refresh view detail proyek agar stepper dan tanda tangan update
                 loadProjectDetail(projId, selectedClientId);
             }
         }
@@ -924,7 +1052,7 @@
             if(error) alert('Gagal: ' + error.message); else { alert('User berhasil ditambahkan'); closeModal('userModal'); }
         }
 
-        // --- TEMPLATE GENERATOR (EXACT MATCH DENGAN CONTOH DOKUMEN) ---
+        // --- TEMPLATE GENERATOR (SMART SIGNATURES BASED ON STAGE) ---
         async function generateTemplate() {
             if(!currentProjectId) return alert('Tidak ada proyek aktif');
             showLoading(true);
@@ -939,14 +1067,12 @@
             const stage = STAGES.find(s => s.id === proj.current_stage);
             if (!stage) return alert('Tahap proyek tidak dikenali.');
 
-            // Parse data dari description (JSON object containing items and notes)
             let parsedData = {};
-            try { parsedData = JSON.parse(proj.description); } catch(e) { parsedData = { items: [], notes: '' }; }
+            try { parsedData = JSON.parse(proj.description); } catch(e) { parsedData = { items: [], notes: '', sales: '' }; }
             
             let items = parsedData.items || [];
             let customNotes = parsedData.notes || '';
             
-            // Calculate totals dynamically
             let totalMat = 0, totalJasa = 0;
             items.forEach(i => {
                 totalMat += (i.mat * i.qty);
@@ -958,7 +1084,11 @@
 
             let docContent = '';
 
-            // FORMAT QUOTATION EXACT MATCH (NSS-Q-X-26-006) WITH DYNAMIC DATA & EDITABLE NOTES
+            // Cek apakah tahap sudah mencapai Approval Direktur (index 2)
+            const currentStageIndex = STAGES.findIndex(s => s.id === stage.id);
+            const isApproved = currentStageIndex >= 2; 
+
+            // FORMAT QUOTATION EXACT MATCH (NSS-Q-X-26-006)
             if (['permintaan_sales', 'pembuatan_penawaran', 'kirim_email', 'approval_direktur'].includes(stage.id)) {
                 let rowsHtml = '';
                 items.forEach((item, index) => {
@@ -981,8 +1111,12 @@
                     `;
                 });
 
-                // Convert newline characters in notes to HTML breaks
                 let notesHtml = customNotes.replace(/\n/g, '<br>');
+                
+                // Logika Tanda Tangan Dinamis
+                const approvedByContent = isApproved 
+                    ? `<div style="height:60px;">${sigTag}</div><p style="font-weight:bold;">( Hermawan Susanto )</p>` 
+                    : `<div style="height:60px; border: 1px dashed #ccc; display:flex; align-items:center; justify-content:center; color:#999; font-size:8pt;">[ Stampel & TTD Approval ]</div>`;
 
                 docContent = `
                     <div class="doc-header keep-together">
@@ -1060,16 +1194,13 @@
                         </div>
                         <div style="width:48%; text-align:center;">
                             <p>Approved by,</p>
-                            <!-- STAMPEL KOSONG UNTUK APPROVAL DIREKTUR -->
-                            <div style="height:60px; border: 1px dashed #ccc; display:flex; align-items:center; justify-content:center; color:#999; font-size:8pt;">
-                                [ Stampel & Tanda Tangan Approval ]
-                            </div>
+                            ${approvedByContent}
                             <p style="font-size:8pt;">Please sign and send back by email</p>
                         </div>
                     </div>
                 `;
             } 
-            // FORMAT INVOICE (Sesuai NSS-INV-XI26-002)
+            // FORMAT INVOICE, PO, BAST tetap sama seperti sebelumnya...
             else if (['invoice_dp', 'invoice_pelunasan'].includes(stage.id)) {
                  const dpp = Math.round(grandTotal / 1.12);
                  const ppnInv = grandTotal - dpp;
@@ -1113,7 +1244,6 @@
                         </div>
                     </div>`;
             }
-            // FORMAT PO PEMBELIAN (Sesuai PO Distritama)
             else if (stage.id === 'po_customer') {
                 docContent = `
                     <div class="doc-header keep-together">
@@ -1149,7 +1279,6 @@
                     </div>
                     <div style="margin-top:20px; font-size:8pt; text-align:center; border-top:1px solid #ccc; padding-top:10px;">PT. Nikawan Solusindo Sejahtera/ CS 1: 0822 4980 4379, CS 2: 0812 9310 1282, email: finance@nikawan-solusindo.com</div>`;
             }
-            // FORMAT BAST (Sesuai BAST Aica Indria)
             else if (stage.id === 'bast_report') {
                 docContent = `
                     <div class="doc-header keep-together">
